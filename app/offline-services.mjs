@@ -25,13 +25,13 @@ export function whisperWords(result){
 }
 export function createOfflineServices({data,nativeRoot,ffmpeg,run,getAsset,persistCatalog,fetchImpl=globalThis.fetch}){
  const modelsDir=path.join(data,'models'),settingsFile=path.join(data,'settings.json');let downloading=new Map();
- let settings={model:'base',optionalAI:false,theme:'light',tourDismissed:false};try{settings={...settings,...JSON.parse(fs.readFileSync(settingsFile,'utf8'))};}catch{}
+ let settings={model:'base',language:'auto',optionalAI:false,theme:'light',tourDismissed:false};try{settings={...settings,...JSON.parse(fs.readFileSync(settingsFile,'utf8'))};}catch{}
  const native=path.join(nativeRoot,`${process.platform}-${process.arch}`),exe=process.platform==='win32'?'.exe':'';
  const whisper=process.platform==='win32'?path.join(native,'whisper','Release','whisper-cli.exe'):path.join(native,'whisper','bin','whisper-cli');
  const deepFilter=path.join(native,'deep-filter'+exe),dfModel=path.join(native,'DeepFilterNet3_onnx.tar.gz');
  const modelFile=model=>path.join(modelsDir,`ggml-${model}.bin`);
  const status=()=>({settings:{...settings},models:Object.entries(MODELS).map(([id,m])=>({id,bytes:m.bytes,installed:fs.existsSync(modelFile(id))&&fs.statSync(modelFile(id)).size===m.bytes})),whisper:fs.existsSync(whisper),studioSound:fs.existsSync(deepFilter)&&fs.existsSync(dfModel)});
- async function saveSettings(input){if(input.model!==undefined){if(!MODELS[input.model])throw Error('Choose base, small or medium');settings.model=input.model;}if(input.optionalAI!==undefined)settings.optionalAI=input.optionalAI===true;if(input.theme!==undefined){if(!['light','dark'].includes(input.theme))throw Error('Choose light or dark appearance');settings.theme=input.theme;}if(input.tourDismissed!==undefined)settings.tourDismissed=input.tourDismissed===true;await fsp.writeFile(settingsFile,JSON.stringify(settings,null,2));return status();}
+ async function saveSettings(input){if(input.model!==undefined){if(!MODELS[input.model])throw Error('Choose base, small or medium');settings.model=input.model;}if(input.language!==undefined){if(input.language!=='auto'&&!/^[a-z]{2}$/.test(input.language))throw Error('Choose auto or a 2-letter language code');settings.language=input.language;}if(input.optionalAI!==undefined)settings.optionalAI=input.optionalAI===true;if(input.theme!==undefined){if(!['light','dark'].includes(input.theme))throw Error('Choose light or dark appearance');settings.theme=input.theme;}if(input.tourDismissed!==undefined)settings.tourDismissed=input.tourDismissed===true;await fsp.writeFile(settingsFile,JSON.stringify(settings,null,2));return status();}
  async function ensureModel(model,j){
   if(!MODELS[model])throw Error('Unknown transcription model');
   const file=modelFile(model),spec=MODELS[model];if(fs.existsSync(file)&&fs.statSync(file).size===spec.bytes)return file;
@@ -47,7 +47,7 @@ export function createOfflineServices({data,nativeRoot,ffmpeg,run,getAsset,persi
   j.stage='Extracting local audio';j.progress=87;const wav=path.join(dir,'speech.wav'),output=path.join(dir,'transcript');
   await run(ffmpeg,['-hide_banner','-loglevel','error','-y','-i',a.file,'-vn','-ar','16000','-ac','1','-c:a','pcm_s16le',wav]);
   j.stage=`Transcribing offline with whisper.cpp (${model||settings.model})`;j.progress=90;
-  await run(whisper,['-m',file,'-f',wav,'-ojf','-of',output,'-ml','1','-sow','-l','auto','-t',String(Math.max(1,Math.min(8,os.cpus().length-1)))]);
+  await run(whisper,['-m',file,'-f',wav,'-ojf','-of',output,'-ml','1','-sow','-l',settings.language||'auto','-t',String(Math.max(1,Math.min(8,os.cpus().length-1)))]);
   const result=JSON.parse(await fsp.readFile(output+'.json','utf8')),words=whisperWords(result);if(!words.length)throw Error('No timestamped speech was detected. Try a larger model or clearer audio.');return {words,engine:'whisper.cpp',model:model||settings.model};
  }
  const processing=new Map();

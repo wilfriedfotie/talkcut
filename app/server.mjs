@@ -76,8 +76,8 @@ const server=http.createServer(async(req,res)=>{
  if(p==='/api/status')return json(res,200,{ready:true,transcription:true,cloudTranscription:offline.cloudEnabled()&&!!process.env.OPENAI_API_KEY,ffmpeg:fs.existsSync(ffmpeg),version:packageVersion,offline:offline.status()});
  if(p==='/api/settings'&&req.method==='POST')return json(res,200,await offline.saveSettings(await body(req)));
  if(p==='/api/models/download'&&req.method==='POST'){const input=await body(req);return json(res,202,job('model-download',async j=>{await offline.ensureModel(input.model,j);return offline.status();}));}
- if(p==='/api/cleanup'&&req.method==='POST'){const input=await body(req);return json(res,200,cleanupPlan(input.composition,input.action));}
- if(p==='/api/cleanup/preview'&&req.method==='POST'){const input=await body(req);return json(res,200,cleanupPreview(input.composition,input.actions));}
+ if(p==='/api/cleanup'&&req.method==='POST'){const input=await body(req);return json(res,200,cleanupPlan(input.composition,input.action,input.options));}
+ if(p==='/api/cleanup/preview'&&req.method==='POST'){const input=await body(req);return json(res,200,cleanupPreview(input.composition,input.actions,input.options));}
  if(p==='/api/sample'&&req.method==='POST'){
   const folder=process.env.TALKCUT_SAMPLES||path.join(root,'samples'),meta=JSON.parse(await fsp.readFile(path.join(folder,'sample.json'),'utf8')),id=randomUUID();
   const files={file:'sample.mp4',proxy:'sample.mp4',studioFile:'sample-after.mp4',studioAudio:'sample-after.wav',thumbnail:'sample.jpg'},asset={id,name:'Try a cleaner story.mp4',duration:meta.duration,type:'video',hasAudio:true,width:meta.width,height:meta.height,waveform:meta.waveform,createdAt:new Date().toISOString()};
