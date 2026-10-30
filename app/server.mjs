@@ -29,6 +29,9 @@ for(const folder of ['media','projects','jobs'])await fsp.mkdir(path.join(data,f
 const projectStore=createProjectStore(data);
 const production=process.argv.includes('--production');
 let port=Number(process.env.PORT||5173);
+const maxUpload=Math.max(1,Number(process.env.TALKCUT_MAX_UPLOAD_GB)||20)*1024*1024*1024;
+const proxyHeight=Math.max(240,Math.min(1080,Number(process.env.TALKCUT_PROXY_HEIGHT)||720));
+const proxyCrf=Math.max(18,Math.min(35,Number(process.env.TALKCUT_PROXY_CRF)||25));
 const jobs=new Map();
 let catalog=[];
 try{catalog=JSON.parse(await fsp.readFile(path.join(data,'catalog.json'),'utf8'));}catch{}
@@ -55,7 +58,7 @@ async function inspect(file,name,id=randomUUID()){
  if(image){asset.thumbnail=path.join(data,'media',`${id}-thumb.jpg`);await encode(['-i',file,'-frames:v','1','-vf','scale=480:-2',asset.thumbnail]);}
  if(video&&!image){
   asset.proxy=path.join(data,'media',`${id}-preview.mp4`);
-  await encode(['-i',file,'-map','0:v:0','-map','0:a:0?','-vf','scale=1280:720:force_original_aspect_ratio=decrease:force_divisible_by=2','-c:v','libx264','-preset','ultrafast','-crf','25','-c:a','aac','-movflags','+faststart',asset.proxy]);
+  await encode(['-i',file,'-map','0:v:0','-map','0:a:0?','-vf',`scale=-2:${proxyHeight}:force_original_aspect_ratio=decrease:force_divisible_by=2`,'-c:v','libx264','-preset','ultrafast','-crf',String(proxyCrf),'-c:a','aac','-movflags','+faststart',asset.proxy]);
   asset.thumbnail=path.join(data,'media',`${id}-thumb.jpg`);
   await encode(['-ss',String(Math.min(1,seconds/2)),'-i',asset.proxy,'-frames:v','1','-vf','scale=480:-2',asset.thumbnail]);
  }
@@ -92,7 +95,7 @@ const server=http.createServer(async(req,res)=>{
  if(p==='/api/upload'&&req.method==='POST'){
   const id=randomUUID(),name=decodeURIComponent(req.headers['x-filename']||'media.mp4').slice(0,200),ext=path.extname(name).toLowerCase();
   if(!['.mp4','.mov','.mkv','.webm','.mp3','.wav','.m4a','.ogg','.aac','.flac','.avi','.png','.jpg','.jpeg','.webp'].includes(ext))return json(res,400,{error:'Choose video, audio, PNG, JPG or WebP media'});
-  const dest=path.join(data,'media',`${id}${ext}`);let size=0;req.on('data',b=>{size+=b.length;if(size>1024*1024*1024)req.destroy(Error('Maximum file size is 1 GB'));});
+  const dest=path.join(data,'media',`${id}${ext}`);let size=0;req.on('data',b=>{size+=b.length;if(size>maxUpload)req.destroy(Error(`Maximum file size is ${Math.round(maxUpload/1024/1024/1024)} GB`));});
   await pipeline(req,fs.createWriteStream(dest));const a=await inspect(dest,name,id);return json(res,201,publicAsset(a));
  }
  if(p==='/api/projects'&&req.method==='GET')return json(res,200,await listProjects());
