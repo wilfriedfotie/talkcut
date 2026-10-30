@@ -8,7 +8,12 @@ const color=v=>/^#[a-f\d]{6}$/i.test(v||'')?v:'#161b23';
 export function renderSize(aspect,resolution){const n=['720','1080','2160'].includes(String(resolution))?Number(resolution):720;return aspect==='9:16'?[n,Math.round(n*16/9/2)*2]:aspect==='1:1'?[n,n]:[Math.round(n*16/9/2)*2,n];}
 export function normalizeLayers(layers,total){return (Array.isArray(layers)?layers:[]).slice(0,100).filter(l=>['video','image','audio','text','shape'].includes(l.type)).map(l=>({...l,start:clamp(l.start,0,total),end:clamp(l.end,0,total,total),sourceStart:Math.max(0,number(l.sourceStart)),x:clamp(l.x,-1,1),y:clamp(l.y,-1,1),width:clamp(l.width,.01,2,.35),height:clamp(l.height,.01,2,.35),opacity:clamp(l.opacity,0,1,1),volume:clamp(l.volume,0,4,1),zIndex:number(l.zIndex),fadeIn:clamp(l.fadeIn,0,total),fadeOut:clamp(l.fadeOut,0,total)})).filter(l=>l.end>l.start).sort((a,b)=>a.zIndex-b.zIndex);}
 
-export async function renderComposition({composition:comp,format='mp4',resolution='720',burnCaptions=true},j,{catalog,data,ffmpeg,run,getAsset}){
+// Caption font options: UI value -> {file in native/fonts, libass family name}.
+export const CAPTION_FONTS={
+ 'clash-display':{file:'ClashDisplay-Semibold.ttf',family:'Clash Display Semibold'},
+ 'dm-sans':{file:'DMSans-Variable.ttf',family:'DM Sans 9pt'}
+};
+export async function renderComposition({composition:comp,format='mp4',resolution='720',burnCaptions=true},j,{catalog,data,ffmpeg,run,getAsset,fontsDir}){
  if(!comp)throw Error('A composition is required');
  const segments=intervals(comp,catalog),total=duration(segments);
  if(!segments.length)throw Error('Your composition has no media to export');
@@ -78,7 +83,11 @@ export async function renderComposition({composition:comp,format='mp4',resolutio
    effects.push(`adelay=${Math.round(l.start*1000)}:all=1`);graph.push(`[${audioInput}:a]${effects.join(',')}[${label}]`);audio.push(label);
   }
  }
- if(burnCaptions&&comp.captions&&cues.length)chain(`subtitles=filename=captions.srt:force_style='FontName=Arial,FontSize=${comp.captionStyle==='bold'?30:22},PrimaryColour=&H00FFFFFF,OutlineColour=&H00101010,BorderStyle=1,Outline=2,Alignment=2,MarginV=36'`);
+ if(burnCaptions&&comp.captions&&cues.length){
+  const font=CAPTION_FONTS[comp.captionFont];let fontName='Arial',fontsOpt='';
+  if(font&&fontsDir){try{await fsp.copyFile(path.join(fontsDir,font.file),path.join(dir,font.file));fontName=font.family;fontsOpt=':fontsdir=.';}catch{/* font missing: keep Arial fallback */}}
+  chain(`subtitles=filename=captions.srt${fontsOpt}:force_style='FontName=${fontName},FontSize=${comp.captionStyle==='bold'?30:22},PrimaryColour=&H00FFFFFF,OutlineColour=&H00101010,BorderStyle=1,Outline=2,Alignment=2,MarginV=36'`);
+ }
  if(comp.title)chain(`drawtext=textfile=title.txt:expansion=none:fontcolor=${color(comp.titleColor||'#ffffff')}:fontsize=${Math.round(w*.04)}:box=1:boxcolor=black@0.5:boxborderw=14:x=(w-text_w)/2:y=${comp.titlePosition==='top'?'h*0.1':'h*0.78'}`);
  let afin=audio.length>1?`${audio.map(a=>`[${a}]`).join('')}amix=inputs=${audio.length}:duration=first:normalize=0,alimiter=limit=0.95`:'[abase]anull';
  const fi=clamp(comp.fadeIn,0,total),fo=clamp(comp.fadeOut,0,total);
