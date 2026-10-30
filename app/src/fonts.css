@@ -3,5 +3,6 @@
 @font-face{font-family:'Clash Display';src:url('/fonts/ClashDisplay-Semibold.woff2') format('woff2');font-weight:600;font-style:normal;font-display:swap}
 @font-face{font-family:'Clash Display';src:url('/fonts/ClashDisplay-Bold.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
 :root{--font-display:'Clash Display','Segoe UI',Arial,sans-serif}
-/* Display font (from Ozirus) on headings and brand; body text keeps the system UI font. */
-.app :is(h1,h2,h3),.app .brand,.app .assistant-panel .assistant-welcome h2,.app .cleanup-popover header strong{font-family:var(--font-display);letter-spacing:-.01em}
+/* Clash Display (from Ozirus) used everywhere: whole app + all controls. */
+.app,.app :is(h1,h2,h3,h4,p,span,button,input,select,textarea,label,small,kbd,li,a,strong){font-family:var(--font-display)}
+.app :is(h1,h2,h3),.app .brand{letter-spacing:-.01em}
