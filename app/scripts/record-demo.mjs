@@ -9,7 +9,7 @@ import {electronPath} from './runtime-paths.mjs';
 const root=process.cwd(),folder=path.join(root,'qa','demo'),frames=path.join(folder,'frames-'+Date.now());
 fs.mkdirSync(frames,{recursive:true});
 const report={framesFolder:path.basename(frames),frames:[],scenes:[],audio:[],errors:[],checks:[]},captured=[];
-const desktop=await _electron.launch({executablePath:electronPath,args:[root],env:{...process.env,TALKCUT_TEST_OFFLINE:'1',TALKCUT_TEST_DATA:path.join(folder,'profile-'+Date.now())}});
+const desktop=await _electron.launch({executablePath:electronPath,args:[root],env:{...process.env,OZICUT_TEST_OFFLINE:'1',OZICUT_TEST_DATA:path.join(folder,'profile-'+Date.now())}});
 let session,start=0,count=0;
 try{
  const page=await desktop.firstWindow();page.setDefaultTimeout(30000);

@@ -1,10 +1,10 @@
-# TalkCut desktop development
+# OziCut desktop development
 
 See the workspace README for setup, core tools and project credits.
 
 ## Storage
 
-Packaged installations store the catalog, imported media, models, projects and jobs in Electron's userData/media-library directory. On Windows this is normally `%APPDATA%/TalkCut/media-library`. Development web mode uses `app/data`. Existing web projects remain there and are not deleted or silently migrated; import project backups and original media as needed. A project JSON contains edit decisions, not embedded source media.
+Packaged installations store the catalog, imported media, models, projects and jobs in Electron's userData/media-library directory. On Windows this is normally `%APPDATA%/OziCut/media-library`. Development web mode uses `app/data`. Existing web projects remain there and are not deleted or silently migrated; import project backups and original media as needed. A project JSON contains edit decisions, not embedded source media.
 
 ## Runtime
 
@@ -42,7 +42,7 @@ The polished first-run UI has a collapsed inspector, one Import action, combined
 To rerun the UI check against the packaged Windows app from the app folder:
 
 ```powershell
-$env:TALKCUT_TEST_EXE = (Resolve-Path 'release/win-unpacked/TalkCut.exe').Path
+$env:OZICUT_TEST_EXE = (Resolve-Path 'release/win-unpacked/OziCut.exe').Path
 node scripts/polish-check.mjs
 ```
 

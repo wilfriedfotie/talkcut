@@ -11,15 +11,15 @@ test('generative video submits fixed schema and polls genuine queue states',asyn
 });
 test('queue URL cannot exfiltrate authorization through host/credentials/protocol',async()=>{
  for(const url of ['http://queue.fal.run/a','https://evil.test/a','https://queue.fal.run.evil.test/a','https://user:pass@queue.fal.run/a'])assert.throws(()=>trustedQueueURL(url));
- let calls=0;await assert.rejects(runFalVideo('video',{key:'test',prompt:'Ocean'},{},{fetchImpl:async()=>{calls++;return json({status_url:'https://evil.test',response_url});}}),/untrusted queue URL/);assert.equal(calls,1);
+ let calls=0;await assert.rejects(runFalVideo('video',{key:'test',prompt:'Ocean'},{},{fetchImpl:async()=>{calls++;return json({status_url:'https://evil.test',response_url});}}),/non fiable/);assert.equal(calls,1);
 });
 test('lip sync only reads server catalog assets and supplies data URIs',async()=>{
  const mock=mockQueue(['COMPLETED']);await runFalVideo('lipsync',{key:'test',videoId:'v',audioId:'a',video_url:'https://evil.test'},{},{...mock,sleep:async()=>{},getAsset:id=>({type:id==='v'?'video':'audio',file:id==='v'?'v.mp4':'a.wav'}),readFile:async()=>Buffer.from('test')});const body=JSON.parse(mock.calls[0].body);assert.match(body.video_url,/^data:video\/mp4;base64,/);assert.match(body.audio_url,/^data:audio\/wav;base64,/);assert.equal(body.sync_mode,'cut_off');
 });
 test('oversized catalog inputs and wrong asset types fail before provider call',async()=>{
  let called=false;const context={fetchImpl:async()=>{called=true;},getAsset:()=>({type:'video',file:'v.mp4'}),readFile:async()=>Buffer.alloc(32*1024*1024+1)};
- await assert.rejects(runFalVideo('lipsync',{key:'test',videoId:'v',audioId:'a'},{},context),/32 MB/);assert.equal(called,false);
- await assert.rejects(runFalVideo('avatar',{key:'test',imageId:'v',text:'Hi'},{},context),/Select a image asset/);
+ await assert.rejects(runFalVideo('lipsync',{key:'test',videoId:'v',audioId:'a'},{},context),/32 Mo/);assert.equal(called,false);
+ await assert.rejects(runFalVideo('avatar',{key:'test',imageId:'v',text:'Hi'},{},context),/Sélectionnez un média image/);
 });
 test('provider failure terminates polling and never reports successful asset',async()=>{
  const mock=mockQueue(['FAILED']);await assert.rejects(runFalVideo('video',{key:'test',prompt:'Ocean'},{},{...mock,sleep:async()=>{}}),/failed/);
@@ -31,5 +31,5 @@ test('background replacement sends documented solid color settings and rejects l
  const mock=mockQueue(['COMPLETED']);const context={...mock,getAsset:()=>({type:'video',file:'v.mp4',duration:12}),readFile:async()=>Buffer.from('video'),sleep:async()=>{}};
  await runFalVideo('background',{key:'test',videoId:'v',backgroundColor:'Green'},{},context);
  const input=JSON.parse(mock.calls[0].body);assert.equal(input.background_color,'Green');assert.equal(input.output_container_and_codec,'mp4_h264');assert.equal(input.preserve_audio,true);assert.match(input.video_url,/^data:video\/mp4/);
- let called=false;await assert.rejects(runFalVideo('background',{key:'test',videoId:'v'},{},{...context,getAsset:()=>({type:'video',duration:30}),fetchImpl:async()=>{called=true;}}),/shorter than 30 seconds/);assert.equal(called,false);
+ let called=false;await assert.rejects(runFalVideo('background',{key:'test',videoId:'v'},{},{...context,getAsset:()=>({type:'video',duration:30}),fetchImpl:async()=>{called=true;}}),/moins de 30 secondes/);assert.equal(called,false);
 });

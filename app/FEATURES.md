@@ -1,4 +1,4 @@
-# TalkCut v1 scope
+# OziCut v1 scope
 
 Core: offline desktop packaging, local model management, word-based editing, non-destructive cuts and Undo, filler/gap/repeated-take cleanup, DeepFilterNet ONNX voice cleanup, A/B preview, 1080p export, local projects and captions.
 

@@ -7,11 +7,11 @@ import {spawn} from 'node:child_process';
 import ffprobe from 'ffprobe-static';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),qa=path.join(root,'qa');await fs.mkdir(qa,{recursive:true});
 const profile=path.join(qa,'offline-desktop-profile-'+Date.now()),modelDir=path.join(profile,'media-library','models');await fs.mkdir(modelDir,{recursive:true});await fs.copyFile(path.join(root,'data','models','ggml-base.bin'),path.join(modelDir,'ggml-base.bin'));
-const executable=process.env.TALKCUT_TEST_EXE||path.join(root,'release','win-unpacked','TalkCut.exe');
+const executable=process.env.OZICUT_TEST_EXE||path.join(root,'release','win-unpacked','OziCut.exe');
 const report={passed:false,executable,network:'External requests denied in Electron renderer and main process; OS adapters unchanged',checks:[],runtimeErrors:[]};let desktop;
 const check=(description)=>{report.checks.push(description);console.log('Passed: '+description);};
 try{
- desktop=await _electron.launch({executablePath:executable,args:path.basename(executable).toLowerCase()==='electron.exe'?[root]:[],env:{...process.env,TALKCUT_TEST_DATA:profile,TALKCUT_TEST_OFFLINE:'1'},timeout:90000});
+ desktop=await _electron.launch({executablePath:executable,args:path.basename(executable).toLowerCase()==='electron.exe'?[root]:[],env:{...process.env,OZICUT_TEST_DATA:profile,OZICUT_TEST_OFFLINE:'1'},timeout:90000});
  const page=await desktop.firstWindow();page.setDefaultTimeout(60000);page.on('pageerror',e=>report.runtimeErrors.push(e.message));await page.waitForLoadState('domcontentloaded');await page.getByRole('button',{name:'Import media',exact:true}).waitFor();if(await page.getByRole('button',{name:'Dismiss tour',exact:true}).count())await page.getByRole('button',{name:'Dismiss tour',exact:true}).click();
  const mainDenied=await desktop.evaluate(async()=>{try{await fetch('https://example.com');return false;}catch(e){return /external network blocked/.test(e.message);}});assert.equal(mainDenied,true);
  const rendererDenied=await page.evaluate(async()=>{try{await fetch('https://example.com');return false;}catch{return true;}});assert.equal(rendererDenied,true);check('External network denied for both main-process fetch and renderer');

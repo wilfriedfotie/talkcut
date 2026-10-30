@@ -1,5 +1,5 @@
-<p align="center"><img src="docs/logo.svg" width="96" alt="TalkCut logo" /></p>
-<h1 align="center">TalkCut</h1>
+<p align="center"><img src="docs/logo.svg" width="96" alt="OziCut logo" /></p>
+<h1 align="center">OziCut</h1>
 <p align="center">Owned and maintained by <strong>Rajan Gupta</strong></p>
 
 **Free, offline Descript alternative. Edit video by editing text, remove ums in one click, Studio Sound, 4K export, no watermark.**
@@ -9,7 +9,7 @@
 [![Downloads](https://img.shields.io/github/downloads/iamspyder/talkcut/total)](https://github.com/iamspyder/talkcut/releases)
 [![Build](https://github.com/iamspyder/talkcut/actions/workflows/ci.yml/badge.svg)](https://github.com/iamspyder/talkcut/actions/workflows/ci.yml)
 
-[![Watch the TalkCut demo](docs/demo.gif)](docs/demo.mp4)
+[![Watch the OziCut demo](docs/demo.gif)](docs/demo.mp4)
 
 **[Watch/download the full demo — MP4, 1080p, 1:33](docs/demo.mp4)** · [Direct MP4 download](https://raw.githubusercontent.com/iamspyder/talkcut/main/docs/demo.mp4)
 
@@ -19,13 +19,13 @@ Recorded from the real app using the bundled sample. Hear Studio Sound Before/Af
 
 | Platform | Latest release |
 | --- | --- |
-| Windows x64 (NSIS) | [Download .exe](https://github.com/iamspyder/talkcut/releases/latest/download/TalkCut-Windows-x64.exe) |
-| macOS Intel / Apple Silicon with Rosetta | [Download .dmg](https://github.com/iamspyder/talkcut/releases/latest/download/TalkCut-macOS-x64.dmg) |
-| Linux x86_64 | [Download AppImage](https://github.com/iamspyder/talkcut/releases/latest/download/TalkCut-Linux-x86_64.AppImage) |
+| Windows x64 (NSIS) | [Download .exe](https://github.com/iamspyder/talkcut/releases/latest/download/OziCut-Windows-x64.exe) |
+| macOS Intel / Apple Silicon with Rosetta | [Download .dmg](https://github.com/iamspyder/talkcut/releases/latest/download/OziCut-macOS-x64.dmg) |
+| Linux x86_64 | [Download AppImage](https://github.com/iamspyder/talkcut/releases/latest/download/OziCut-Linux-x86_64.AppImage) |
 
 [All releases, SHA-256 checksums and update metadata](https://github.com/iamspyder/talkcut/releases). Installers are unsigned; verify the SHA-256 checksums attached to each release. macOS/Linux packages must be smoke-tested on their target platforms. For AppImage, make the downloaded file executable before launching.
 
-This app bundles FFmpeg/ffprobe, including GPL-enabled builds. [Third-party notices and source/build notes](THIRD_PARTY_NOTICES.md) describe their separate terms. TalkCut's own code is MIT licensed.
+This app bundles FFmpeg/ffprobe, including GPL-enabled builds. [Third-party notices and source/build notes](THIRD_PARTY_NOTICES.md) describe their separate terms. OziCut's own code is MIT licensed.
 
 ## Features
 
@@ -101,9 +101,9 @@ Read [CONTRIBUTING.md](CONTRIBUTING.md) and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT
 
 ## Credits and license
 
-TalkCut code and original branding: **Copyright © 2026 Rajan Gupta**, [MIT](LICENSE). Projects studied: [autoEdit_2](https://github.com/OpenNewsLabs/autoEdit_2), [auto-editor](https://github.com/WyattBlue/auto-editor), [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) and [whisper.cpp](https://github.com/ggml-org/whisper.cpp).
+OziCut code and original branding: **Copyright © 2026 Rajan Gupta**, [MIT](LICENSE). Projects studied: [autoEdit_2](https://github.com/OpenNewsLabs/autoEdit_2), [auto-editor](https://github.com/WyattBlue/auto-editor), [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) and [whisper.cpp](https://github.com/ggml-org/whisper.cpp).
 
-Dependencies retain their own authorship and licenses. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), [the full dependency inventory](docs/DEPENDENCIES.md) and `app/LICENSES/`. Descript is a third-party product name; TalkCut is independent and unaffiliated.
+Dependencies retain their own authorship and licenses. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), [the full dependency inventory](docs/DEPENDENCIES.md) and `app/LICENSES/`. Descript is a third-party product name; OziCut is independent and unaffiliated.
 
 ## FAQ
 
@@ -121,4 +121,4 @@ Dependencies retain their own authorship and licenses. See [THIRD_PARTY_NOTICES.
 
 **Will 4K export improve a low-resolution recording?** It can render a 3840×2160 landscape canvas but cannot recover missing source detail.
 
-**Where are my files?** In Electron's per-user TalkCut application-data directory, under `media-library`. JSON project backups contain edits, so keep original media too.
+**Where are my files?** In Electron's per-user OziCut application-data directory, under `media-library`. JSON project backups contain edits, so keep original media too.

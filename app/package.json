@@ -1,5 +1,5 @@
 {
-  "name": "talkcut",
+  "name": "ozicut",
   "version": "1.0.3",
   "private": true,
   "type": "module",
@@ -7,6 +7,7 @@
     "dev": "node server.mjs",
     "build": "vite build",
     "test": "node --test tests/*.test.mjs",
+    "models:thumbnail": "node scripts/fetch-thumbnail-models.mjs",
     "start": "node server.mjs --production",
     "test:browser": "node scripts/browser-check.mjs",
     "test:layers": "node scripts/layers-browser-check.mjs",
@@ -23,6 +24,7 @@
     "test:layout": "node scripts/layout-check.mjs"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "1.1.1",
     "electron-updater": "^6.8.9",
     "ffmpeg-static": "5.2.0",
     "ffprobe-static": "^3.1.0",

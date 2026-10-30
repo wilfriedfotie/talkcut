@@ -1,16 +1,16 @@
-# TalkCut demo
+# OziCut demo
 
 [Watch/download the full 1080p MP4](demo.mp4) · [Direct download](https://raw.githubusercontent.com/iamspyder/talkcut/main/docs/demo.mp4)
 
-[![TalkCut workflow preview](demo.gif)](demo.mp4)
+[![OziCut workflow preview](demo.gif)](demo.mp4)
 
-Created for **Rajan Gupta**, TalkCut's sole owner and maintainer. Duration: **92.8 seconds**. Format: **1920×1080, 30 fps, H.264 + AAC in MP4**. The GIF is a short, silent README preview; the MP4 contains the audible comparison.
+Created for **Rajan Gupta**, OziCut's sole owner and maintainer. Duration: **92.8 seconds**. Format: **1920×1080, 30 fps, H.264 + AAC in MP4**. The GIF is a short, silent README preview; the MP4 contains the audible comparison.
 
 ## What it shows
 
 | Time | Demonstration |
 | --- | --- |
-| 0:00 | TalkCut introduction |
+| 0:00 | OziCut introduction |
 | 0:03 | Open the bundled sample with its included transcript |
 | 0:12 | Preview cleanup, apply it and restore the words with Undo |
 | 0:24 | Studio Sound Before: original noisy sample |

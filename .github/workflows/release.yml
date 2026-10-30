@@ -58,7 +58,7 @@ jobs:
       - run: node scripts/release-assets.mjs
       - uses: actions/upload-artifact@v4
         with:
-          name: TalkCut-${{ matrix.target }}
+          name: OziCut-${{ matrix.target }}
           if-no-files-found: error
           path: |
             app/release/*.exe
@@ -76,7 +76,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: TalkCut-*
+          pattern: OziCut-*
           merge-multiple: true
           path: artifacts
       - name: Verify downloaded asset checksums
@@ -89,7 +89,7 @@ jobs:
         with:
           draft: true
           generate_release_notes: true
-          name: TalkCut ${{ github.ref_name }}
+          name: OziCut ${{ github.ref_name }}
           body: |
             Maintained and owned by Rajan Gupta. Windows/macOS builds are unsigned unless signing secrets are configured. Verify the SHA256SUMS files before installation.
           files: artifacts/*

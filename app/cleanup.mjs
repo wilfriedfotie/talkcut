@@ -1,15 +1,22 @@
 const normalize=text=>String(text).toLowerCase().replace(/[^\p{L}\p{N}']/gu,'');
 // Hesitation sounds (EN + FR). Pure interjections, safe to always cut.
-const FILLER=/^(um+|uh+|erm+|hmm+|ah+|euh+|heu+|euh+|ben|bah|hein|bof)$/;
+const FILLER=/^(u+m+|u+h+|e+r+m+|h+m+|m+h+|hum+|a+h+|e+u+h+|h+e+u+h*|eh+|beh|ben|bah|boh|hein|bof|pff+|tsk)$/;
 // Multi-word FR/EN discourse fillers, only cut when standing alone as a unit.
-const FILLER_PHRASE=new Set(['du coup','en fait','tu vois','genre','voila','voilà','quoi','you know','i mean','like']);
+const FILLER_PHRASE=new Set([
+ 'du coup','en fait','en gros','genre','voila','voilà','quoi','disons',
+ 'tu vois','tu sais','vous voyez','vous savez','tu vois quoi','enfin bref','bon ben','ben voilà','ben voila','voilà quoi','voila quoi',
+ 'on va dire','comment dire','tu vois ce que je veux dire',
+ 'you know','i mean','like','you see','basically','you know what i mean']);
+const PHRASE_MAX=Math.max(...[...FILLER_PHRASE].map(p=>p.split(' ').length));
 // Words allowed to repeat for emphasis: never treated as a short-repeat stutter.
 const EMPHASIS=new Set(['tres','très','non','oui','si','no','yes','very','so','bien']);
 export function cleanupPlan(composition,action,options={}){
  const words=composition.words||[],live=words.filter(w=>!w.deleted),removed=[],changes=[];
  const minGap=Number.isFinite(options.minGap)?Math.max(.24,options.minGap):.7;
- if(action==='fillers')for(let i=0;i<live.length;i++){const w=live[i],one=normalize(w.text),two=i+1<live.length?one+' '+normalize(live[i+1].text):null;
-  if(two&&FILLER_PHRASE.has(two)){removed.push({id:w.id,text:w.text,start:w.start,end:w.end},{id:live[i+1].id,text:live[i+1].text,start:live[i+1].start,end:live[i+1].end});i++;}
+ if(action==='fillers')for(let i=0;i<live.length;i++){const w=live[i],one=normalize(w.text);
+  // Longest phrase match first so 'tu vois quoi' wins over 'tu vois'.
+  let n=0;for(let k=Math.min(PHRASE_MAX,live.length-i);k>=2&&!n;k--)if(FILLER_PHRASE.has(live.slice(i,i+k).map(x=>normalize(x.text)).join(' ')))n=k;
+  if(n){for(const x of live.slice(i,i+n))removed.push({id:x.id,text:x.text,start:x.start,end:x.end});i+=n-1;}
   else if(FILLER.test(one)||FILLER_PHRASE.has(one))removed.push({id:w.id,text:w.text,start:w.start,end:w.end});}
  if(action==='gaps'){
   // Prefer real audio-detected silences when provided (whisper word gaps are near-zero).
@@ -34,7 +41,7 @@ export function cleanupPlan(composition,action,options={}){
  if(action==='retakes'){const cut=new Set();for(let i=0;i<live.length;i++){for(let n=Math.min(16,Math.floor((live.length-i)/2));n>=3;n--){const first=live.slice(i,i+n),second=live.slice(i+n,i+2*n);if(first.some(w=>cut.has(w.id))||first[0].assetId!==second.at(-1).assetId||first[0].speaker!==second.at(-1).speaker||second[0].start-first.at(-1).end>3||second[0].start<first.at(-1).end)continue;if(first.every((w,k)=>normalize(w.text)&&normalize(w.text)===normalize(second[k].text))){for(const w of first){cut.add(w.id);removed.push({id:w.id,text:w.text,start:w.start,end:w.end});}i+=n-1;break;}}}
   // Short stutters: a word (or 2-word unit) immediately repeated, e.g. "je je", "c'est c'est". Keep the later copy; skip emphasis words.
   for(let i=0;i<live.length;i++){if(cut.has(live[i].id))continue;for(let n=2;n>=1;n--){const first=live.slice(i,i+n),second=live.slice(i+n,i+2*n);if(second.length<n)continue;if(first.some(w=>cut.has(w.id))||first[0].assetId!==second.at(-1).assetId||first[0].speaker!==second.at(-1).speaker||second[0].start-first.at(-1).end>1.2||second[0].start<first.at(-1).end)continue;if(n===1&&EMPHASIS.has(normalize(first[0].text)))continue;if(first.every((w,k)=>normalize(w.text)&&normalize(w.text)===normalize(second[k].text))){for(const w of first){cut.add(w.id);removed.push({id:w.id,text:w.text,start:w.start,end:w.end});}i+=n-1;break;}}}}
- if(!['fillers','gaps','retakes'].includes(action))throw Error('Unknown local cleanup action');
+ if(!['fillers','gaps','retakes'].includes(action))throw Error('Action de nettoyage inconnue');
  return {action,removed,deleteIds:removed.filter(r=>r.id).map(r=>r.id),changes,secondsRemoved:removed.reduce((sum,r)=>sum+Math.max(0,r.end-r.start),0)};
 }
 export function cleanupPreview(composition,actions=[],options={}){

@@ -6,7 +6,7 @@ export function attachRealtime(server,{port,listProjects}){
  const presence=id=>{const peers=Array.from(rooms.get(id)||[]).map(ws=>({clientId:ws.clientId,name:ws.displayName||'Editor',playhead:ws.playhead||0,selectedWordId:ws.selectedWordId||null}));for(const ws of rooms.get(id)||[])send(ws,{type:'presence',peers});};
  const allowedOrigin=origin=>!origin||origin===`http://localhost:${port}`||origin===`http://127.0.0.1:${port}`;
  server.on('upgrade',async(req,socket,head)=>{
-  if(process.env.TALKCUT_TOKEN&&req.headers['x-talkcut-token']!==process.env.TALKCUT_TOKEN){socket.destroy();return;}
+  if(process.env.OZICUT_TOKEN&&req.headers['x-ozicut-token']!==process.env.OZICUT_TOKEN){socket.destroy();return;}
   let url;try{url=new URL(req.url,'http://127.0.0.1');}catch{return;}
   if(!url.pathname.startsWith('/api/live/'))return;
   const projectId=url.pathname.split('/').at(-1),clientId=url.searchParams.get('client');

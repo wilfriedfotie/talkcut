@@ -30,7 +30,7 @@ First public open-source release, owned and maintained by Rajan Gupta. Earlier l
 - MP4 export through 4K, MP3 and subtitle/text exports without a watermark.
 - Optional, disabled-by-default OpenAI, fal, ElevenLabs and Pexels integrations.
 - Bundled sample, first-run tour, light/dark themes, accessible resize dividers and saved workspace sizes.
-- TalkCut branding, favicon, native icons, GitHub update integration and release automation.
+- OziCut branding, favicon, native icons, GitHub update integration and release automation.
 
 ### Known limitations
 

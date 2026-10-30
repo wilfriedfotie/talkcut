@@ -7,7 +7,7 @@ import {fileURLToPath} from 'node:url';
 import {spawn} from 'node:child_process';
 import ffmpeg from 'ffmpeg-static';
 import {emptyComposition} from '../src/model.js';
-const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),base=process.env.TALKCUT_URL||'http://127.0.0.1:5173',qa=path.join(root,'qa');await fs.mkdir(qa,{recursive:true});
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),base=process.env.OZICUT_URL||'http://127.0.0.1:5173',qa=path.join(root,'qa');await fs.mkdir(qa,{recursive:true});
 const exec=(exe,args)=>new Promise((resolve,reject)=>{const p=spawn(exe,args,{windowsHide:true});let error='';p.stderr.on('data',b=>error+=b);p.on('error',reject);p.on('close',code=>code?reject(Error(error)):resolve());});
 const api=async(route,body)=>{const r=await fetch(base+'/api/'+route,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{});const result=await r.json();if(!r.ok)throw Error(result.error);return result;};
 const prefix='QA layers '+Date.now(),video=path.join(qa,'layers-fixture.mp4'),image=path.join(qa,'layers-fixture.png');

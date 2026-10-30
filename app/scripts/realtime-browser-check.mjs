@@ -7,10 +7,10 @@ import {randomUUID} from 'node:crypto';
 import {emptyComposition} from '../src/model.js';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
-const base=process.env.TALKCUT_URL||'http://127.0.0.1:5173';
+const base=process.env.OZICUT_URL||'http://127.0.0.1:5173';
 const id=randomUUID(),initialName=`QA realtime ${Date.now()}`;
 const project={id,name:initialName,compositions:[emptyComposition('Realtime test composition')],createdAt:new Date().toISOString()};
-const creation=await fetch(base+'/api/projects',{method:'POST',headers:{'Content-Type':'application/json','X-Talkcut-Revision':'0'},body:JSON.stringify(project)});
+const creation=await fetch(base+'/api/projects',{method:'POST',headers:{'Content-Type':'application/json','X-OziCut-Revision':'0'},body:JSON.stringify(project)});
 assert.equal(creation.status,200,'isolated QA project should be created');
 const stored=await(await fetch(base+'/api/projects/'+id)).json();
 const browser=await chromium.launch({channel:'chrome',executablePath:process.env.CHROME_PATH||undefined,headless:true});

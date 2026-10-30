@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest an improvement to TalkCut
+description: Suggest an improvement to OziCut
 labels: [enhancement]
 body:
   - type: textarea

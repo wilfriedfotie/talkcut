@@ -1,6 +1,6 @@
 # Launch file inventory
 
-The initial commit contains the existing TalkCut application plus the launch preparation below. All files are new to Git because no prior repository existed.
+The initial commit contains the existing OziCut application plus the launch preparation below. All files are new to Git because no prior repository existed.
 
 ## Launch additions
 
@@ -50,9 +50,9 @@ README.md; app/package.json and package-lock.json; app/release-config.json; app/
 - app/THIRD_PARTY_NOTICES.md
 - app/ai-services.mjs
 - app/build/icons/README.txt
-- app/build/icons/talkcut.icns
-- app/build/icons/talkcut.ico
-- app/build/icons/talkcut.png
+- app/build/icons/ozicut.icns
+- app/build/icons/ozicut.ico
+- app/build/icons/ozicut.png
 - app/cleanup.mjs
 - app/desktop/main.cjs
 - app/desktop/preload.cjs
@@ -65,7 +65,7 @@ README.md; app/package.json and package-lock.json; app/release-config.json; app/
 - app/package.json
 - app/project-store.mjs
 - app/public/apple-touch-icon.png
-- app/public/brand/talkcut-mark.svg
+- app/public/brand/ozicut-mark.svg
 - app/public/favicon-32.png
 - app/public/favicon.ico
 - app/public/favicon.svg

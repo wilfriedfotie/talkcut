@@ -4,7 +4,7 @@ Prepared on 2026-10-18 for **Rajan Gupta**, sole project owner, targeting `iamsp
 
 ## Repository and privacy
 
-- There was no pre-existing Git repository or commit history. A new `main` branch, clean initial `TalkCut v1.0.0` commit and `v1.0.0` tag are prepared locally. No push or remote repository creation is performed.
+- There was no pre-existing Git repository or commit history. A new `main` branch, clean initial `OziCut v1.0.0` commit and `v1.0.0` tag are prepared locally. No push or remote repository creation is performed.
 - Gitleaks 8.30.1 was downloaded from its official release and checked against its published SHA-256 checksum. A whole-workspace directory scan inspected eligible files, including ignored test data. Large executable/model/archive files were skipped by the configured 50 MB limit; they are excluded from Git. No absence-of-secrets guarantee is implied for opaque binaries.
 - Initial findings were examples in the scanner's own README and encryption material in disposable Electron test profiles. Those disposable files/profiles were removed. The subsequent directory scan found **zero secrets**. No provider credentials were found in the source.
 - The final publishable tree and full new Git history are scanned again with redaction. Reports stay under ignored `.audit/`; reports never print discovered secret values.

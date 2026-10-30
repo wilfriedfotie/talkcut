@@ -1,8 +1,8 @@
-TalkCut brand assets
+OziCut brand assets
 
-Master vector: public/brand/talkcut-mark.svg
+Master vector: public/brand/ozicut-mark.svg
 Web: public/favicon.svg, favicon.ico, favicon-32.png, apple-touch-icon.png
-Desktop: build/icons/talkcut.png (1024px), talkcut.ico (16–256px), talkcut.icns (16–1024px)
+Desktop: build/icons/ozicut.png (1024px), ozicut.ico (16–256px), ozicut.icns (16–1024px)
 
 The purple speech bubble and play symbol represent editing spoken stories. The mark uses a transparent outer background and a self-contained purple tile, so it works on both app themes.
 

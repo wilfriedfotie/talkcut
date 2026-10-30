@@ -14,7 +14,7 @@ test('render geometry and layer validation constrain external project inputs',()
  assert.equal(layers.length,2);assert.equal(layers[0].type,'audio');assert.equal(layers[1].opacity,1);assert.equal(layers[1].width,.35);
 });
 test('real FFmpeg exports picture-in-picture, text, shapes, music, fades and MP3',async()=>{
- const data=await fsp.mkdtemp(path.join(os.tmpdir(),'talkcut-render-'));
+ const data=await fsp.mkdtemp(path.join(os.tmpdir(),'ozicut-render-'));
  try{
   const video=path.join(data,'video.mp4'),music=path.join(data,'music.wav'),image=path.join(data,'image.bmp');
   await run(ffmpeg,['-hide_banner','-loglevel','error','-y','-f','lavfi','-i','color=c=blue:s=160x90:r=30:d=1','-f','lavfi','-i','sine=frequency=300:duration=1','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac','-shortest',video]);
@@ -32,5 +32,5 @@ test('real FFmpeg exports picture-in-picture, text, shapes, music, fades and MP3
   const cleaned=await renderComposition({composition:{...comp,studioSound:true,chromakey:false,title:'',layers:[]},format:'mp3'},{id:'studio'},context);
   const metrics=await run(ffmpeg,['-hide_banner','-loglevel','error','-i',path.join(data,'jobs','studio',cleaned.filename),'-af','astats=metadata=1:reset=0,ametadata=print:key=lavfi.astats.1.Zero_crossings_rate:file=-','-f','null','-']);
   const rates=[...metrics.matchAll(/Zero_crossings_rate=(\d+(?:\.\d+)?)/g)].map(m=>Number(m[1]));assert.ok(rates.length>0&&rates.at(-1)>.02,'Studio Sound export must contain the 600 Hz processed source rather than original 300 Hz audio');
- }finally{const resolved=path.resolve(data),parent=path.resolve(os.tmpdir())+path.sep;if(!resolved.startsWith(parent)||!path.basename(resolved).startsWith('talkcut-render-'))throw Error('Unsafe render test cleanup target');await fsp.rm(resolved,{recursive:true,force:true});}
+ }finally{const resolved=path.resolve(data),parent=path.resolve(os.tmpdir())+path.sep;if(!resolved.startsWith(parent)||!path.basename(resolved).startsWith('ozicut-render-'))throw Error('Unsafe render test cleanup target');await fsp.rm(resolved,{recursive:true,force:true});}
 });

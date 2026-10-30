@@ -1,6 +1,6 @@
 # Third-party notices
 
-TalkCut is owned solely by **Rajan Gupta**. Its original code and branding are MIT licensed, copyright 2026 Rajan Gupta. This does **not** replace third-party copyright or licenses, and does not make the complete installer MIT-only.
+OziCut is owned solely by **Rajan Gupta**. Its original code and branding are MIT licensed, copyright 2026 Rajan Gupta. This does **not** replace third-party copyright or licenses, and does not make the complete installer MIT-only.
 
 ## Native helpers and runtimes
 
@@ -15,7 +15,7 @@ TalkCut is owned solely by **Rajan Gupta**. Its original code and branding are M
 | [Electron](https://github.com/electron/electron) | MIT, plus bundled third-party terms | Desktop runtime; includes Chromium, Node.js, V8, BoringSSL and other components. Electron's `LICENSE` and `LICENSES.chromium.html` are retained next to the application executable in packaged distributions. |
 | [Node.js](https://github.com/nodejs/node/blob/main/LICENSE) | MIT and third-party notices | Main-process JavaScript runtime included by Electron. |
 | [Chromium](https://chromium.googlesource.com/chromium/src/+/main/LICENSE) | BSD-3-Clause and third-party licenses | Sandboxed UI/media runtime; detailed component notices are in Electron's generated Chromium notice file. |
-| [ONNX / inference dependencies](https://github.com/Rikorose/DeepFilterNet) | Component-specific, including Apache-2.0 and MIT | Used internally by the released DeepFilterNet helper. Preserve upstream Rust dependency notices/source when rebuilding. TalkCut does not bundle a separate proprietary inference SDK. |
+| [ONNX / inference dependencies](https://github.com/Rikorose/DeepFilterNet) | Component-specific, including Apache-2.0 and MIT | Used internally by the released DeepFilterNet helper. Preserve upstream Rust dependency notices/source when rebuilding. OziCut does not bundle a separate proprietary inference SDK. |
 
 ## UI, services and build tooling
 
@@ -23,7 +23,7 @@ React and React DOM (MIT), Lucide React/icons (ISC), ws (MIT), electron-updater 
 
 The complete lockfile-derived list, exact versions, license expressions and package paths are in [docs/DEPENDENCIES.md](docs/DEPENDENCIES.md). Full available npm license/notice texts are collected in `app/LICENSES/npm-notices.txt` by `npm run notices`; release builds regenerate this file on their target OS. Uninstalled optional platform packages remain listed in the inventory, and installed packages supply their notices. Development-only tooling is identified separately and is not intentionally shipped as runtime code.
 
-NSIS (zlib/libpng for the installer engine; individual plugins retain their own notices), 7-Zip (LGPL-2.1-or-later plus its unRAR restriction where applicable), and WiX (MS-RL) may be used by electron-builder as platform-specific build tools. Retain notices supplied with those tools. They are not TalkCut-owned code. The application uses the operating system's Segoe UI/Arial sans-serif fonts rather than distributing font files.
+NSIS (zlib/libpng for the installer engine; individual plugins retain their own notices), 7-Zip (LGPL-2.1-or-later plus its unRAR restriction where applicable), and WiX (MS-RL) may be used by electron-builder as platform-specific build tools. Retain notices supplied with those tools. They are not OziCut-owned code. The application uses the operating system's Segoe UI/Arial sans-serif fonts rather than distributing font files.
 
 ## Projects studied; no source bundled
 
@@ -45,6 +45,6 @@ This software uses FFmpeg/ffprobe licensed under the applicable LGPL/GPL build t
 
 ## Original media and community text
 
-TalkCut branding, procedural demo artwork and demonstration script were created for this project and are covered by the project license. The sample contains synthetic speech generated locally using an OS-provided voice; voice-engine assets are not shipped. No user recordings or stock-provider media are included. OS voice rights must be checked before replacing or redistributing generated samples commercially.
+OziCut branding, procedural demo artwork and demonstration script were created for this project and are covered by the project license. The sample contains synthetic speech generated locally using an OS-provided voice; voice-engine assets are not shipped. No user recordings or stock-provider media are included. OS voice rights must be checked before replacing or redistributing generated samples commercially.
 
 The [Contributor Covenant 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/) is distributed under [CC-BY-4.0](https://github.com/EthicalSource/contributor_covenant/blob/release/LICENSE.md) with attribution in `CODE_OF_CONDUCT.md`.

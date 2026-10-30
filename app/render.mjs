@@ -18,18 +18,48 @@ const MASHUP_BASE=CAPTION_FONTS['dm-sans'],MASHUP_KEY=CAPTION_FONTS['clash-displ
 const isKeyword=w=>{const t=w.trim().replace(/[^\p{L}\p{N}']/gu,'');return t.length>=6||(t.length>=2&&t===t.toUpperCase()&&/\p{L}/u.test(t));};
 const assTime=t=>{const cs=Math.round(Math.max(0,t)*100),h=Math.floor(cs/360000),m=Math.floor(cs/6000)%60,s=Math.floor(cs/100)%60,c=cs%100;return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(c).padStart(2,'0')}`;};
 const assEscape=s=>String(s).replace(/\\/g,'\\​').replace(/[{}]/g,'').replace(/\r?\n/g,'\\N');
-function mashupAss(cues,fontSize,primary='&H00FFFFFF',marginV){
- const mv=Number.isFinite(marginV)?marginV:Math.round(fontSize*1.6);
- const head=`[Script Info]\nScriptType: v4.00+\nPlayResX: 1920\nPlayResY: 1080\nWrapStyle: 2\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV\nStyle: Default,${MASHUP_BASE.family},${fontSize},${primary},&H00101010,1,2,0,2,40,40,${mv}\n\n[Events]\nFormat: Layer, Start, End, Style, Text`;
- const lines=cues.map(c=>{const text=c.text.split(/(\s+)/).map(w=>isKeyword(w)?`{\\fn${MASHUP_KEY.family}}${assEscape(w)}{\\fn${MASHUP_BASE.family}}`:assEscape(w)).join('');return `Dialogue: 0,${assTime(c.start)},${assTime(c.end)},Default,${text}`;});
+// ASS captions on libass's default 384x288 canvas (the one SRT uses), so sizes and margins match the plain export.
+// Layer 1 repeats the line with every word transparent except the one being spoken, drawn in a BorderStyle 3 box:
+// the box follows the glyph alpha, so only the active word gets a background and the layout is unchanged.
+function captionsAss(cues,{font,keyFont,fontSize,primary,back,borderStyle,marginH,marginV,hi}){
+ const style=(name,bs,oc,ow)=>`Style: ${name},${font},${fontSize},${primary},${oc},${bs},${ow},0,2,${marginH},${marginH},${marginV}`;
+ const head=`[Script Info]\nScriptType: v4.00+\nPlayResX: 384\nPlayResY: 288\nWrapStyle: 0\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV\n${style('Default',borderStyle,borderStyle===3?back:'&H00101010',borderStyle===3?6:2)}${hi?'\n'+style('Word',3,hi.color,0):''}\n\n[Events]\nFormat: Layer, Start, End, Style, Text`;
+ const word=w=>keyFont&&isKeyword(w)?`{\\fn${keyFont}}${assEscape(w)}{\\fn${font}}`:assEscape(w);
+ const lines=[];
+ for(const c of cues){
+  lines.push(`Dialogue: 0,${assTime(c.start)},${assTime(c.end)},Default,${c.text.split(/(\s+)/).map(word).join('')}`);
+  if(hi&&c.words?.length)c.words.forEach((w,k)=>{const end=k+1<c.words.length?c.words[k+1].start:c.end;if(end<=w.start)return;
+   const text=c.words.map((x,j)=>j===k?`{\\alpha&H00&\\xbord${hi.x}\\ybord${hi.y}}${word(x.text)}{\\alpha&HFF&\\bord0}`:word(x.text)).join(' ');
+   lines.push(`Dialogue: 1,${assTime(w.start)},${assTime(end)},Word,{\\alpha&HFF&}${text}`);});
+ }
  return head+'\n'+lines.join('\n')+'\n';
 }
+// Writes captions.ass (and the fonts it needs) into dir; returns the ffmpeg filter that burns it, run with cwd=dir.
+export async function writeCaptionsAss(comp,cues,dir,fontsDir){
+ const fontSize=Math.round((comp.captionStyle==='bold'?30:22)*(Number(comp.captionSize)||1));
+ // hex #RRGGBB -> ASS &HBBGGRR (BGR, no alpha prefix needed for PrimaryColour via force_style)
+ const ass=hex=>{const m=/^#?([0-9a-f]{6})$/i.exec(hex||'');if(!m)return '&H00FFFFFF';const r=m[1].slice(0,2),g=m[1].slice(2,4),b=m[1].slice(4,6);return `&H00${b}${g}${r}`.toUpperCase();};
+ const primary=ass(comp.captionColor||'#ffffff');
+ // Background box: BorderStyle 3 (opaque box) with BackColour when a bg colour is set; '' = no box (outline only).
+ const hasBg=comp.captionBg!==''&&comp.captionBg!==undefined?comp.captionBg||'#101017':(comp.captionBg===''?null:'#101017');
+ const back=hasBg?ass(hasBg):'&H00000000';const borderStyle=hasBg?3:1;
+ // captionY is the baseline fraction from the top; captionWidth the centred box width (both in 384x288 script units).
+ const capW=clamp(comp.captionWidth,.3,1,.92);
+ const marginH=Math.round((1-capW)/2*384),marginV=Math.round(((1-(comp.captionY??.88))+24/1080)*288);
+ const copyFont=async f=>{if(!f||!fontsDir)return false;try{await fsp.copyFile(path.join(fontsDir,f.file),path.join(dir,f.file));return true;}catch{return false;/* font missing: Arial fallback */}};
+ const mashup=comp.captionFont==='mashup'&&await copyFont(MASHUP_BASE)&&await copyFont(MASHUP_KEY);
+ const single=mashup?null:CAPTION_FONTS[comp.captionFont],font=mashup?MASHUP_BASE.family:single&&await copyFont(single)?single.family:'Arial';
+ // Word box padding is in em in the preview; ASS borders are in script units, so scale by the font size.
+ const hi=comp.wordHighlight?{color:ass(comp.wordHighlightColor||'#7967ff'),x:+((comp.wordHighlightPadX??.25)*fontSize).toFixed(2),y:+((comp.wordHighlightPadY??.1)*fontSize).toFixed(2)}:null;
+ await fsp.writeFile(path.join(dir,'captions.ass'),captionsAss(cues,{font,keyFont:mashup?MASHUP_KEY.family:null,fontSize,primary,back,borderStyle,marginH,marginV,hi}));
+ return `ass=filename=captions.ass${font==='Arial'?'':':fontsdir=.'}`;
+}
 export async function renderComposition({composition:comp,format='mp4',resolution='720',burnCaptions=true},j,{catalog,data,ffmpeg,run,getAsset,fontsDir}){
- if(!comp)throw Error('A composition is required');
+ if(!comp)throw Error('Une composition est requise');
  const segments=intervals(comp,catalog),total=duration(segments);
- if(!segments.length)throw Error('Your composition has no media to export');
- if(segments.length>250)throw Error('Please export fewer than 250 separate cuts at once');
- for(const s of segments){const a=getAsset(s.assetId);if(!Number.isFinite(s.start)||!Number.isFinite(s.end)||s.start<0||s.end>a.duration+.1)throw Error('An edit is outside its source media');}
+ if(!segments.length)throw Error('Votre composition ne contient aucun média à exporter');
+ if(segments.length>250)throw Error('Exportez moins de 250 coupes à la fois');
+ for(const s of segments){const a=getAsset(s.assetId);if(!Number.isFinite(s.start)||!Number.isFinite(s.end)||s.start<0||s.end>a.duration+.1)throw Error('Une coupe dépasse son média source');}
  const layers=normalizeLayers(comp.layers,total),dir=path.join(data,'jobs',j.id);await fsp.mkdir(dir,{recursive:true});
  const encode=(args,options={})=>run(ffmpeg,['-hide_banner','-loglevel','error','-y',...args],options);
  const [w,h]=renderSize(comp.aspect,resolution),cues=subtitles(comp,segments);
@@ -37,7 +67,7 @@ export async function renderComposition({composition:comp,format='mp4',resolutio
  const parts=[];
  for(let i=0;i<segments.length;i++){
   const s=segments[i],a=getAsset(s.assetId),out=path.join(dir,`part-${i}.mp4`),len=s.end-s.start;
-  j.stage=`Rendering cut ${i+1} of ${segments.length}`;j.progress=Math.round(i/segments.length*65);
+  j.stage=`Rendu du segment ${i+1} sur ${segments.length}`;j.progress=Math.round(i/segments.length*65);
   const args=['-ss',String(s.start),'-t',String(len),'-i',a.file];let vi='0:v:0',ai='0:a:0',extra=1;
   if(comp.studioSound&&a.studioAudio){args.push('-ss',String(s.start),'-t',String(len),'-i',a.studioAudio);ai=`${extra++}:a:0`;}
   if(a.type!=='video'){args.push('-f','lavfi','-i',`color=c=${color(comp.background)}:s=${w}x${h}:r=30`);vi=`${extra++}:v:0`;}
@@ -49,7 +79,7 @@ export async function renderComposition({composition:comp,format='mp4',resolutio
   args.push('-filter_complex',`${visual};[${ai}]${af.join(',')}[a]`,'-map','[v]','-map','[a]','-t',String(len),'-c:v','libx264','-preset','veryfast','-crf','21','-pix_fmt','yuv420p','-c:a','aac','-ar','48000',out);await encode(args);parts.push(`file 'part-${i}.mp4'`);
  }
  await fsp.writeFile(path.join(dir,'concat.txt'),parts.join('\n'));await encode(['-f','concat','-safe','0','-i','concat.txt','-c','copy','base.mp4'],{cwd:dir});
- j.stage='Compositing layers and mixing audio';j.progress=72;
+ j.stage='Assemblage des calques et mixage audio';j.progress=72;
  const args=['-i','base.mp4'],graph=[],audio=['abase'];let nextInput=1,current='vbase',serial=0;
  graph.push('[0:v]setpts=PTS-STARTPTS[vbase]','[0:a]asetpts=PTS-STARTPTS[abase]');
  const chain=(filter)=>{const out=`v${serial++}`;graph.push(`[${current}]${filter}[${out}]`);current=out;};
@@ -80,7 +110,7 @@ export async function renderComposition({composition:comp,format='mp4',resolutio
   let audioInput=input;
   if(comp.studioSound&&a.studioAudio&&l.volume>0){audioInput=nextInput++;args.push('-ss',String(l.sourceStart),'-t',String(len),'-i',a.studioAudio);}
   if(l.type!=='audio'){
-   if(l.type==='video'&&a.type!=='video')throw Error('A video layer requires a video asset');
+   if(l.type==='video'&&a.type!=='video')throw Error('Un calque vidéo nécessite un média vidéo');
    const label=`layer${i}`,effects=[`scale=${lw}:${lh}:force_original_aspect_ratio=decrease`,`pad=${lw}:${lh}:(ow-iw)/2:(oh-ih)/2:color=black@0`,'setsar=1','fps=30','format=rgba',`colorchannelmixer=aa=${l.opacity}`];
    if(l.fadeIn)effects.push(`fade=t=in:st=0:d=${Math.min(l.fadeIn,len)}:alpha=1`);
    if(l.fadeOut)effects.push(`fade=t=out:st=${Math.max(0,len-l.fadeOut)}:d=${Math.min(l.fadeOut,len)}:alpha=1`);
@@ -94,29 +124,14 @@ export async function renderComposition({composition:comp,format='mp4',resolutio
    effects.push(`adelay=${Math.round(l.start*1000)}:all=1`);graph.push(`[${audioInput}:a]${effects.join(',')}[${label}]`);audio.push(label);
   }
  }
- if(burnCaptions&&comp.captions&&cues.length){
-  const fontSize=Math.round((comp.captionStyle==='bold'?30:22)*(Number(comp.captionSize)||1));
-  // hex #RRGGBB -> ASS &HBBGGRR (BGR, no alpha prefix needed for PrimaryColour via force_style)
-  const ass=hex=>{const m=/^#?([0-9a-f]{6})$/i.exec(hex||'');if(!m)return '&H00FFFFFF';const r=m[1].slice(0,2),g=m[1].slice(2,4),b=m[1].slice(4,6);return `&H00${b}${g}${r}`.toUpperCase();};
-  const primary=ass(comp.captionColor||'#ffffff');
-  // captionY is the baseline fraction from the top; MarginV is the distance from the bottom in 1080 units.
-  const marginV=Math.round((1-(comp.captionY??.88))*1080+24);
-  let mashupReady=false;
-  if(comp.captionFont==='mashup'&&fontsDir){
-   try{await fsp.copyFile(path.join(fontsDir,MASHUP_BASE.file),path.join(dir,MASHUP_BASE.file));await fsp.copyFile(path.join(fontsDir,MASHUP_KEY.file),path.join(dir,MASHUP_KEY.file));await fsp.writeFile(path.join(dir,'captions.ass'),mashupAss(cues,fontSize,primary,marginV));mashupReady=true;}catch{/* fall back to plain subtitles below */}
-  }
-  if(mashupReady)chain(`ass=filename=captions.ass:fontsdir=.`);
-  else{const font=CAPTION_FONTS[comp.captionFont];let fontName='Arial',fontsOpt='';
-   if(font&&fontsDir){try{await fsp.copyFile(path.join(fontsDir,font.file),path.join(dir,font.file));fontName=font.family;fontsOpt=':fontsdir=.';}catch{/* font missing: keep Arial fallback */}}
-   chain(`subtitles=filename=captions.srt${fontsOpt}:force_style='FontName=${fontName},FontSize=${fontSize},PrimaryColour=${primary},OutlineColour=&H00101010,BorderStyle=1,Outline=2,Alignment=2,MarginV=${marginV}'`);}
- }
+ if(burnCaptions&&comp.captions&&cues.length)chain(await writeCaptionsAss(comp,cues,dir,fontsDir));
  if(comp.title)chain(`drawtext=textfile=title.txt:expansion=none:fontcolor=${color(comp.titleColor||'#ffffff')}:fontsize=${Math.round(w*.04)}:box=1:boxcolor=black@0.5:boxborderw=14:x=(w-text_w)/2:y=${comp.titlePosition==='top'?'h*0.1':'h*0.78'}`);
  let afin=audio.length>1?`${audio.map(a=>`[${a}]`).join('')}amix=inputs=${audio.length}:duration=first:normalize=0,alimiter=limit=0.95`:'[abase]anull';
  const fi=clamp(comp.fadeIn,0,total),fo=clamp(comp.fadeOut,0,total);
  if(fi){chain(`fade=t=in:st=0:d=${fi}`);afin+=`,afade=t=in:st=0:d=${fi}`;}
  if(fo){chain(`fade=t=out:st=${total-fo}:d=${fo}`);afin+=`,afade=t=out:st=${total-fo}:d=${fo}`;}
  graph.push(`${afin}[aout]`);
- const output=path.join(dir,`talkcut-export.${format==='mp3'?'mp3':'mp4'}`);
+ const output=path.join(dir,`ozicut-export.${format==='mp3'?'mp3':'mp4'}`);
  args.push('-filter_complex_threads','1','-filter_complex',graph.join(';'),'-map',`[${current}]`,'-map','[aout]','-t',String(total));
  if(format==='mp3')args.push('-vn','-c:a','libmp3lame','-b:a','192k');else args.push('-c:v','libx264','-preset','veryfast','-crf','21','-pix_fmt','yuv420p','-c:a','aac','-movflags','+faststart');
  args.push(output);await encode(args,{cwd:dir});j.progress=99;

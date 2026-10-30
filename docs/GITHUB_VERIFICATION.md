@@ -17,7 +17,7 @@ New post-preparation files: `app/scripts/native-download.mjs`, `app/tests/native
 
 ## Release state and limits
 
-The repository audit reads optional comma-separated prohibited names from `TALKCUT_FORBIDDEN_NAMES`. Name checking is skipped when unset; configured names are matched without regard to case, whitespace or punctuation.
+The repository audit reads optional comma-separated prohibited names from `OZICUT_FORBIDDEN_NAMES`. Name checking is skipped when unset; configured names are matched without regard to case, whitespace or punctuation.
 
 v1.0.3 is published at https://github.com/iamspyder/talkcut/releases/tag/v1.0.3. All three public latest-download installer links returned HTTP 200 after publication. Windows/macOS builds are unsigned without configured certificates. macOS automatic updates require properly signed distribution.
 

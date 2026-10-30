@@ -1,6 +1,6 @@
-# Contributing to TalkCut
+# Contributing to OziCut
 
-TalkCut is owned and maintained solely by **Rajan Gupta**. Contributions are welcome under the MIT license; contributors retain copyright in their contributions. Third-party copyright notices must be preserved.
+OziCut is owned and maintained solely by **Rajan Gupta**. Contributions are welcome under the MIT license; contributors retain copyright in their contributions. Third-party copyright notices must be preserved.
 
 Read the [Code of Conduct](CODE_OF_CONDUCT.md). Search existing issues before opening a bug or proposing a feature. For substantial changes, discuss the intended behavior in an issue first.
 

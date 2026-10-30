@@ -1,3 +1,5 @@
 export function friendlyDuration(seconds){const n=Math.max(0,Math.round(seconds));return n>=60?`${Math.floor(n/60)}m ${n%60}s`:`${n}s`;}
 export function cleanupSummary(summary={}){const parts=[];if(summary.fillers)parts.push(`${summary.fillers} mot${summary.fillers===1?'':'s'} de remplissage`);if(summary.silenceSeconds>.01)parts.push(`${friendlyDuration(summary.silenceSeconds)} de silence`);if(summary.retakes)parts.push(`${summary.retakes} répétition${summary.retakes===1?'':'s'}`);return parts.length?'Retire '+parts.join(', '):'Aucune modification à faire';}
 export function remainingSeconds(job,now=Date.now()){const progress=Number(job?.progress),start=Date.parse(job?.createdAt);if(!Number.isFinite(start)||progress<5||progress>=100||['complete','failed'].includes(job?.status))return null;return Math.max(1,Math.round(Math.max(0,now-start)/1000*(100-progress)/progress));}
+// 13 836 176 496 -> '13,8 Go'; 4 200 000 -> '4 Mo'.
+export function friendlyBytes(bytes){const n=Math.max(0,Number(bytes)||0);return n>=1e9?`${(n/1e9).toLocaleString('fr-FR',{maximumFractionDigits:1})} Go`:`${Math.max(n>0?1:0,Math.round(n/1e6))} Mo`;}

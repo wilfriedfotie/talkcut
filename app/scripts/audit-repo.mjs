@@ -5,7 +5,7 @@ import {execFileSync} from 'node:child_process';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const files=[...new Set(execFileSync('git',['ls-files','--cached','--others','--exclude-standard','-z'],{cwd:root}).toString().split('\0').filter(Boolean))];
 const problems=[];
-const forbiddenNames=(process.env.TALKCUT_FORBIDDEN_NAMES||'').split(',').map(name=>name.trim().toLowerCase().replace(/[^a-z0-9]/g,'')).filter(Boolean);
+const forbiddenNames=(process.env.OZICUT_FORBIDDEN_NAMES||'').split(',').map(name=>name.trim().toLowerCase().replace(/[^a-z0-9]/g,'')).filter(Boolean);
 const privatePath=/(?:[A-Z]:[\\/]+Users[\\/]+[^\\/\s]+|\/(?:Users|home)\/[^/\s]+)/i;
 const secretPatterns=[/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,/\bgh[pousr]_[A-Za-z0-9]{30,}\b/,/\bgithub_pat_[A-Za-z0-9_]{40,}\b/,/\bAKIA[A-Z0-9]{16}\b/,/\bsk-(?:proj-)?[A-Za-z0-9_-]{35,}\b/];
 for(const file of files){

@@ -1,10 +1,10 @@
-# Releasing TalkCut
+# Releasing OziCut
 
 Owner and release maintainer: **Rajan Gupta**. Repository: `iamspyder/talkcut`.
 
 ## First public launch
 
-Local preparation creates `main`, a `TalkCut v1.0.0` commit and tag `v1.0.0`; it does not push, create a remote repository, upload assets or publish a release. Run from the repository root after reviewing the audit and license notes:
+Local preparation creates `main`, a `OziCut v1.0.0` commit and tag `v1.0.0`; it does not push, create a remote repository, upload assets or publish a release. Run from the repository root after reviewing the audit and license notes:
 
 ```sh
 gh repo create talkcut --public --source=. --push

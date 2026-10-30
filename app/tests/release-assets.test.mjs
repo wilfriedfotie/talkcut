@@ -7,11 +7,11 @@ import {execFileSync} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 test('release assets retain versioned update files and hash stable aliases without build diagnostics',async()=>{
- const temp=await fs.mkdtemp(path.join(os.tmpdir(),'talkcut-release-'));
+ const temp=await fs.mkdtemp(path.join(os.tmpdir(),'ozicut-release-'));
  try{
   await fs.mkdir(path.join(temp,'release'));await fs.writeFile(path.join(temp,'package.json'),JSON.stringify({version:'1.0.0'}));
   const suffix=process.platform==='win32'?'exe':process.platform==='darwin'?'dmg':'AppImage';
-  const installer=`TalkCut-1.0.0.${suffix}`;
+  const installer=`OziCut-1.0.0.${suffix}`;
   await fs.writeFile(path.join(temp,'release',installer),'synthetic installer fixture');
   await fs.writeFile(path.join(temp,'release','latest.yml'),'version: 1.0.0\n');
   await fs.writeFile(path.join(temp,'release','builder-debug.yml'),'local diagnostic');
