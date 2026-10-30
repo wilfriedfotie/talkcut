@@ -1,6 +1,7 @@
 import fsp from 'node:fs/promises';
 import path from 'node:path';
 import {intervals,duration,subtitles,srt} from './src/model.js';
+import {CAPTION_FACES,captionFaces,layoutCaption,wordHighlightBox} from './src/caption-layout.js';
 
 const number=(v,f=0)=>Number.isFinite(Number(v))?Number(v):f;
 const clamp=(v,a,b,f=a)=>Math.max(a,Math.min(b,number(v,f)));
@@ -8,53 +9,45 @@ const color=v=>/^#[a-f\d]{6}$/i.test(v||'')?v:'#161b23';
 export function renderSize(aspect,resolution){const n=['720','1080','2160'].includes(String(resolution))?Number(resolution):720;return aspect==='9:16'?[n,Math.round(n*16/9/2)*2]:aspect==='1:1'?[n,n]:[Math.round(n*16/9/2)*2,n];}
 export function normalizeLayers(layers,total){return (Array.isArray(layers)?layers:[]).slice(0,100).filter(l=>['video','image','audio','text','shape'].includes(l.type)).map(l=>({...l,start:clamp(l.start,0,total),end:clamp(l.end,0,total,total),sourceStart:Math.max(0,number(l.sourceStart)),x:clamp(l.x,-1,1),y:clamp(l.y,-1,1),width:clamp(l.width,.01,2,.35),height:clamp(l.height,.01,2,.35),opacity:clamp(l.opacity,0,1,1),volume:clamp(l.volume,0,4,1),zIndex:number(l.zIndex),fadeIn:clamp(l.fadeIn,0,total),fadeOut:clamp(l.fadeOut,0,total)})).filter(l=>l.end>l.start).sort((a,b)=>a.zIndex-b.zIndex);}
 
-// Caption font options: UI value -> {file in native/fonts, libass family name}.
-export const CAPTION_FONTS={
- 'clash-display':{file:'ClashDisplay-Semibold.ttf',family:'Clash Display Semibold'},
- 'dm-sans':{file:'DMSans-Variable.ttf',family:'DM Sans 9pt'}
-};
-// Mashup export: base font DM Sans, keywords switched to Clash Display per word.
-const MASHUP_BASE=CAPTION_FONTS['dm-sans'],MASHUP_KEY=CAPTION_FONTS['clash-display'];
-const isKeyword=w=>{const t=w.trim().replace(/[^\p{L}\p{N}']/gu,'');return t.length>=6||(t.length>=2&&t===t.toUpperCase()&&/\p{L}/u.test(t));};
 const assTime=t=>{const cs=Math.round(Math.max(0,t)*100),h=Math.floor(cs/360000),m=Math.floor(cs/6000)%60,s=Math.floor(cs/100)%60,c=cs%100;return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(c).padStart(2,'0')}`;};
-const assEscape=s=>String(s).replace(/\\/g,'\\​').replace(/[{}]/g,'').replace(/\r?\n/g,'\\N');
-// ASS captions on libass's default 384x288 canvas (the one SRT uses), so sizes and margins match the plain export.
-// Layer 1 repeats the line with every word transparent except the one being spoken, drawn in a BorderStyle 3 box:
-// the box follows the glyph alpha, so only the active word gets a background and the layout is unchanged.
-function captionsAss(cues,{font,keyFont,fontSize,primary,back,borderStyle,marginH,marginV,hi}){
- const style=(name,bs,oc,ow)=>`Style: ${name},${font},${fontSize},${primary},${oc},${bs},${ow},0,2,${marginH},${marginH},${marginV}`;
- const head=`[Script Info]\nScriptType: v4.00+\nPlayResX: 384\nPlayResY: 288\nWrapStyle: 0\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV\n${style('Default',borderStyle,borderStyle===3?back:'&H00101010',borderStyle===3?6:2)}${hi?'\n'+style('Word',3,hi.color,0):''}\n\n[Events]\nFormat: Layer, Start, End, Style, Text`;
- const word=w=>keyFont&&isKeyword(w)?`{\\fn${keyFont}}${assEscape(w)}{\\fn${font}}`:assEscape(w);
- const lines=[];
+const assEscape=s=>String(s).replace(/\\/g,'\\​').replace(/[{}]/g,'').replace(/\r?\n/g,' ');
+// hex #RRGGBB -> ASS &HBBGGRR& ; alpha 0..1 -> ASS &HAA& (00 = opaque).
+const assColor=hex=>{const m=/^#?([0-9a-f]{6})$/i.exec(hex||'')?.[1]||'ffffff';return `&H${m.slice(4,6)}${m.slice(2,4)}${m.slice(0,2)}&`.toUpperCase();};
+const assAlpha=a=>`&H${Math.round(255*(1-a)).toString(16).padStart(2,'0').toUpperCase()}&`;
+const r1=v=>Math.round(v*10)/10;
+// Rounded rectangle as an ASS drawing from (0,0) to (w,h), cubic Béziers for the corners.
+function roundedRect(w,h,r){
+ w=Math.round(w);h=Math.round(h);r=Math.round(Math.min(r,w/2,h/2));const k=Math.round(r*.4477);
+ return `m ${r} 0 l ${w-r} 0 b ${w-k} 0 ${w} ${k} ${w} ${r} l ${w} ${h-r} b ${w} ${h-k} ${w-k} ${h} ${w-r} ${h} l ${r} ${h} b ${k} ${h} 0 ${h-k} 0 ${h-r} l 0 ${r} b 0 ${k} ${k} 0 ${r} 0`;
+}
+// Captions at the output size, from the same layout as the preview (src/caption-layout.js):
+// layer 0 the rounded box, layer 1 the spoken word's rounded background, layer 2 the words at their measured positions.
+// Without browser measurements (API callers) widths are estimated, so each line is centred by libass instead.
+export function captionsAss(cues,comp,W,H,metrics){
+ const measure=(text,face)=>{const v=Number(metrics?.[face]?.[text]);return Number.isFinite(v)&&v>=0&&v<50?v:text===' '?.28:text.length*.56;};
+ const font=(f,s)=>{const c=CAPTION_FACES[f];return `\\fn${c.ass}\\fs${r1(s.fontPx*(c.winAsc+c.winDesc))}\\b${c.bold?1:0}`;};
+ const shape=(b,color,alpha)=>`{\\an7\\pos(${r1(b.x)},${r1(b.y)})\\bord0\\shad0\\1c${assColor(color)}\\1a${assAlpha(alpha)}\\p1}${roundedRect(b.w,b.h,b.r)}{\\p0}`;
+ const base=captionFaces(comp).base,events=[],ev=(layer,a,b,text)=>events.push(`Dialogue: ${layer},${assTime(a)},${assTime(b)},Default,,0,0,0,,${text}`);
  for(const c of cues){
-  lines.push(`Dialogue: 0,${assTime(c.start)},${assTime(c.end)},Default,${c.text.split(/(\s+)/).map(word).join('')}`);
-  if(hi&&c.words?.length)c.words.forEach((w,k)=>{const end=k+1<c.words.length?c.words[k+1].start:c.end;if(end<=w.start)return;
-   const text=c.words.map((x,j)=>j===k?`{\\alpha&H00&\\xbord${hi.x}\\ybord${hi.y}}${word(x.text)}{\\alpha&HFF&\\bord0}`:word(x.text)).join(' ');
-   lines.push(`Dialogue: 1,${assTime(w.start)},${assTime(end)},Word,{\\alpha&HFF&}${text}`);});
+  const L=layoutCaption(c,comp,W,H,measure),s=L.style;if(!L.words.length)continue;
+  const ink=`\\1c${assColor(s.color)}\\bord${r1(s.outline)}\\3c&H000000&\\shad0`,top=(baseline,f)=>r1(baseline-CAPTION_FACES[f].winAsc*s.fontPx);
+  if(s.bg)ev(0,c.start,c.end,shape(L.box,s.bg,s.bgAlpha));
+  if(s.hi)L.words.forEach((w,k)=>{const next=L.words[k+1]?.start,end=Number.isFinite(next)?next:c.end;if(Number.isFinite(w.start)&&end>w.start)ev(1,w.start,end,shape(wordHighlightBox(w,s),s.hi.color,1));});
+  if(metrics)for(const w of L.words)ev(2,c.start,c.end,`{\\an7\\pos(${r1(w.x)},${top(w.baseline,w.face)})${font(w.face,s)}${ink}}${assEscape(w.text)}`);
+  else for(const l of L.lines)ev(2,c.start,c.end,`{\\an8\\pos(${r1(s.centerX)},${top(l.baseline,base)})${font(base,s)}${ink}}${l.words.map(w=>w.face===base?assEscape(w.text):`{${font(w.face,s)}}${assEscape(w.text)}{${font(base,s)}}`).join(' ')}`);
  }
- return head+'\n'+lines.join('\n')+'\n';
+ return `[Script Info]\nScriptType: v4.00+\nPlayResX: ${W}\nPlayResY: ${H}\nWrapStyle: 2\nScaledBorderAndShadow: yes\nKerning: yes\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,Arial,40,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,0,0,7,0,0,0,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n${events.join('\n')}\n`;
 }
 // Writes captions.ass (and the fonts it needs) into dir; returns the ffmpeg filter that burns it, run with cwd=dir.
-export async function writeCaptionsAss(comp,cues,dir,fontsDir){
- const fontSize=Math.round((comp.captionStyle==='bold'?30:22)*(Number(comp.captionSize)||1));
- // hex #RRGGBB -> ASS &HBBGGRR (BGR, no alpha prefix needed for PrimaryColour via force_style)
- const ass=hex=>{const m=/^#?([0-9a-f]{6})$/i.exec(hex||'');if(!m)return '&H00FFFFFF';const r=m[1].slice(0,2),g=m[1].slice(2,4),b=m[1].slice(4,6);return `&H00${b}${g}${r}`.toUpperCase();};
- const primary=ass(comp.captionColor||'#ffffff');
- // Background box: BorderStyle 3 (opaque box) with BackColour when a bg colour is set; '' = no box (outline only).
- const hasBg=comp.captionBg!==''&&comp.captionBg!==undefined?comp.captionBg||'#101017':(comp.captionBg===''?null:'#101017');
- const back=hasBg?ass(hasBg):'&H00000000';const borderStyle=hasBg?3:1;
- // captionY is the baseline fraction from the top; captionWidth the centred box width (both in 384x288 script units).
- const capW=clamp(comp.captionWidth,.3,1,.92);
- const marginH=Math.round((1-capW)/2*384),marginV=Math.round(((1-(comp.captionY??.88))+24/1080)*288);
- const copyFont=async f=>{if(!f||!fontsDir)return false;try{await fsp.copyFile(path.join(fontsDir,f.file),path.join(dir,f.file));return true;}catch{return false;/* font missing: Arial fallback */}};
- const mashup=comp.captionFont==='mashup'&&await copyFont(MASHUP_BASE)&&await copyFont(MASHUP_KEY);
- const single=mashup?null:CAPTION_FONTS[comp.captionFont],font=mashup?MASHUP_BASE.family:single&&await copyFont(single)?single.family:'Arial';
- // Word box padding is in em in the preview; ASS borders are in script units, so scale by the font size.
- const hi=comp.wordHighlight?{color:ass(comp.wordHighlightColor||'#7967ff'),x:+((comp.wordHighlightPadX??.25)*fontSize).toFixed(2),y:+((comp.wordHighlightPadY??.1)*fontSize).toFixed(2)}:null;
- await fsp.writeFile(path.join(dir,'captions.ass'),captionsAss(cues,{font,keyFont:mashup?MASHUP_KEY.family:null,fontSize,primary,back,borderStyle,marginH,marginV,hi}));
- return `ass=filename=captions.ass${font==='Arial'?'':':fontsdir=.'}`;
+// metrics: word widths measured by the browser (measureCaptionWords); [W,H]: the frame the captions are laid out on.
+export async function writeCaptionsAss(comp,cues,dir,fontsDir,{size=renderSize(comp.aspect,'1080'),metrics}={}){
+ const {base,key}=captionFaces(comp),files=[base,key].map(f=>f&&CAPTION_FACES[f].file).filter(Boolean);
+ for(const f of files)try{await fsp.copyFile(path.join(fontsDir,f),path.join(dir,f));}catch{/* font missing: libass falls back */}
+ const m=metrics&&typeof metrics==='object'&&!Array.isArray(metrics)?metrics:null;
+ await fsp.writeFile(path.join(dir,'captions.ass'),captionsAss(cues,comp,size[0],size[1],m));
+ return `ass=filename=captions.ass${files.length?':fontsdir=.':''}`;
 }
-export async function renderComposition({composition:comp,format='mp4',resolution='720',burnCaptions=true},j,{catalog,data,ffmpeg,run,getAsset,fontsDir}){
+export async function renderComposition({composition:comp,format='mp4',resolution='720',burnCaptions=true,captionMetrics},j,{catalog,data,ffmpeg,run,getAsset,fontsDir}){
  if(!comp)throw Error('Une composition est requise');
  const segments=intervals(comp,catalog),total=duration(segments);
  if(!segments.length)throw Error('Votre composition ne contient aucun média à exporter');
@@ -124,7 +117,7 @@ export async function renderComposition({composition:comp,format='mp4',resolutio
    effects.push(`adelay=${Math.round(l.start*1000)}:all=1`);graph.push(`[${audioInput}:a]${effects.join(',')}[${label}]`);audio.push(label);
   }
  }
- if(burnCaptions&&comp.captions&&cues.length)chain(await writeCaptionsAss(comp,cues,dir,fontsDir));
+ if(burnCaptions&&comp.captions&&cues.length)chain(await writeCaptionsAss(comp,cues,dir,fontsDir,{size:[w,h],metrics:captionMetrics}));
  if(comp.title)chain(`drawtext=textfile=title.txt:expansion=none:fontcolor=${color(comp.titleColor||'#ffffff')}:fontsize=${Math.round(w*.04)}:box=1:boxcolor=black@0.5:boxborderw=14:x=(w-text_w)/2:y=${comp.titlePosition==='top'?'h*0.1':'h*0.78'}`);
  let afin=audio.length>1?`${audio.map(a=>`[${a}]`).join('')}amix=inputs=${audio.length}:duration=first:normalize=0,alimiter=limit=0.95`:'[abase]anull';
  const fi=clamp(comp.fadeIn,0,total),fo=clamp(comp.fadeOut,0,total);
