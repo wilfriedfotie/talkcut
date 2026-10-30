@@ -9,3 +9,4 @@
 .app,.app :is(p,span,button,input,select,textarea,label,small,kbd,li,a,strong){font-family:var(--font-body)}
 /* Headings and brand keep the Clash Display display face. */
 .app :is(h1,h2,h3,h4),.app .brand{font-family:var(--font-display);letter-spacing:-.01em}
+.app .bg-presets{display:flex;gap:8px;margin-top:8px}.app .bg-presets button{width:26px;height:26px;border-radius:8px;border:2px solid var(--line);cursor:pointer;transition:transform .1s}.app .bg-presets button:hover{transform:scale(1.1)}.app .bg-presets button.selected{border-color:var(--purple);box-shadow:0 0 0 2px var(--purple-soft)}
