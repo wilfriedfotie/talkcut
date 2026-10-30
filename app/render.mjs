@@ -13,6 +13,16 @@ export const CAPTION_FONTS={
  'clash-display':{file:'ClashDisplay-Semibold.ttf',family:'Clash Display Semibold'},
  'dm-sans':{file:'DMSans-Variable.ttf',family:'DM Sans 9pt'}
 };
+// Mashup export: base font DM Sans, keywords switched to Clash Display per word.
+const MASHUP_BASE=CAPTION_FONTS['dm-sans'],MASHUP_KEY=CAPTION_FONTS['clash-display'];
+const isKeyword=w=>{const t=w.trim().replace(/[^\p{L}\p{N}']/gu,'');return t.length>=6||(t.length>=2&&t===t.toUpperCase()&&/\p{L}/u.test(t));};
+const assTime=t=>{const cs=Math.round(Math.max(0,t)*100),h=Math.floor(cs/360000),m=Math.floor(cs/6000)%60,s=Math.floor(cs/100)%60,c=cs%100;return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}.${String(c).padStart(2,'0')}`;};
+const assEscape=s=>String(s).replace(/\\/g,'\\​').replace(/[{}]/g,'').replace(/\r?\n/g,'\\N');
+function mashupAss(cues,fontSize){
+ const head=`[Script Info]\nScriptType: v4.00+\nPlayResX: 1920\nPlayResY: 1080\nWrapStyle: 2\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, OutlineColour, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV\nStyle: Default,${MASHUP_BASE.family},${fontSize},&H00FFFFFF,&H00101010,1,2,0,2,40,40,${Math.round(fontSize*1.6)}\n\n[Events]\nFormat: Layer, Start, End, Style, Text`;
+ const lines=cues.map(c=>{const text=c.text.split(/(\s+)/).map(w=>isKeyword(w)?`{\\fn${MASHUP_KEY.family}}${assEscape(w)}{\\fn${MASHUP_BASE.family}}`:assEscape(w)).join('');return `Dialogue: 0,${assTime(c.start)},${assTime(c.end)},Default,${text}`;});
+ return head+'\n'+lines.join('\n')+'\n';
+}
 export async function renderComposition({composition:comp,format='mp4',resolution='720',burnCaptions=true},j,{catalog,data,ffmpeg,run,getAsset,fontsDir}){
  if(!comp)throw Error('A composition is required');
  const segments=intervals(comp,catalog),total=duration(segments);
@@ -84,9 +94,15 @@ export async function renderComposition({composition:comp,format='mp4',resolutio
   }
  }
  if(burnCaptions&&comp.captions&&cues.length){
-  const font=CAPTION_FONTS[comp.captionFont];let fontName='Arial',fontsOpt='';
-  if(font&&fontsDir){try{await fsp.copyFile(path.join(fontsDir,font.file),path.join(dir,font.file));fontName=font.family;fontsOpt=':fontsdir=.';}catch{/* font missing: keep Arial fallback */}}
-  chain(`subtitles=filename=captions.srt${fontsOpt}:force_style='FontName=${fontName},FontSize=${comp.captionStyle==='bold'?30:22},PrimaryColour=&H00FFFFFF,OutlineColour=&H00101010,BorderStyle=1,Outline=2,Alignment=2,MarginV=36'`);
+  const fontSize=comp.captionStyle==='bold'?30:22;
+  let mashupReady=false;
+  if(comp.captionFont==='mashup'&&fontsDir){
+   try{await fsp.copyFile(path.join(fontsDir,MASHUP_BASE.file),path.join(dir,MASHUP_BASE.file));await fsp.copyFile(path.join(fontsDir,MASHUP_KEY.file),path.join(dir,MASHUP_KEY.file));await fsp.writeFile(path.join(dir,'captions.ass'),mashupAss(cues,fontSize));mashupReady=true;}catch{/* fall back to plain subtitles below */}
+  }
+  if(mashupReady)chain(`ass=filename=captions.ass:fontsdir=.`);
+  else{const font=CAPTION_FONTS[comp.captionFont];let fontName='Arial',fontsOpt='';
+   if(font&&fontsDir){try{await fsp.copyFile(path.join(fontsDir,font.file),path.join(dir,font.file));fontName=font.family;fontsOpt=':fontsdir=.';}catch{/* font missing: keep Arial fallback */}}
+   chain(`subtitles=filename=captions.srt${fontsOpt}:force_style='FontName=${fontName},FontSize=${fontSize},PrimaryColour=&H00FFFFFF,OutlineColour=&H00101010,BorderStyle=1,Outline=2,Alignment=2,MarginV=36'`);}
  }
  if(comp.title)chain(`drawtext=textfile=title.txt:expansion=none:fontcolor=${color(comp.titleColor||'#ffffff')}:fontsize=${Math.round(w*.04)}:box=1:boxcolor=black@0.5:boxborderw=14:x=(w-text_w)/2:y=${comp.titlePosition==='top'?'h*0.1':'h*0.78'}`);
  let afin=audio.length>1?`${audio.map(a=>`[${a}]`).join('')}amix=inputs=${audio.length}:duration=first:normalize=0,alimiter=limit=0.95`:'[abase]anull';
