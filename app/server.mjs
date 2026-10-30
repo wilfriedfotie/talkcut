@@ -44,6 +44,17 @@ const publicAsset=a=>{const {file,proxy,studioFile,studioAudio,...visible}=a;ret
 const nativeProcesses=new Set();
 const run=(exe,args,options={})=>new Promise((resolve,reject)=>{const {captureStderr,...spawnOptions}=options;const p=spawn(exe,args,{cwd:data,windowsHide:true,...spawnOptions});nativeProcesses.add(p);p.once('close',()=>nativeProcesses.delete(p));let out='',err='';p.stdout.on('data',b=>{out=(out+b).slice(-2000000);});p.stderr.on('data',b=>{err=(err+b).slice(-20000);});p.on('error',reject);p.on('close',code=>code===0?resolve(captureStderr?err:out):reject(Error(err||`Media process exited with code ${code}`)));});
 const encode=args=>run(ffmpeg,['-hide_banner','-loglevel','error','-y',...args]);
+// Opt-in hardware encode. Benchmarks on 4K->720p showed VideoToolbox slower than libx264 here
+// (GPU<->CPU copies cost more than the encode saves at proxy resolutions), so it is OFF by default.
+const hwAccel=process.env.TALKCUT_HWACCEL==='1';
+async function encodeProxy(file,out,height){
+ const vf=`scale=-2:${height}:force_original_aspect_ratio=decrease:force_divisible_by=2`;
+ const common=['-i',file,'-map','0:v:0','-map','0:a:0?','-vf',vf,'-c:a','aac','-movflags','+faststart',out];
+ if(hwAccel&&process.platform==='darwin'){
+  try{return await encode(['-c:v','h264_videotoolbox','-b:v',`${Math.round(height*8)}k`,'-allow_sw','1',...common]);}catch{/* fall back to software below */}
+ }
+ return encode(['-c:v','libx264','-preset','ultrafast','-crf',String(proxyCrf),...common]);
+}
 async function body(req,max=8*1024*1024){let bytes=0,chunks=[];for await(const b of req){bytes+=b.length;if(bytes>max)throw Error('Request is too large');chunks.push(b);}return JSON.parse(Buffer.concat(chunks).toString()||'{}');}
 function job(type,work){const item={id:randomUUID(),type,status:'queued',progress:0,stage:'Queued',createdAt:new Date().toISOString()};jobs.set(item.id,item);Promise.resolve().then(async()=>{item.status='processing';try{item.result=await work(item);item.status='complete';item.progress=100;item.stage='Ready';}catch(e){item.status='failed';item.error=e.message.slice(-1800);item.stage='Failed';}});return item;}
 function sendFile(req,res,file,type,download){const stat=fs.statSync(file),headers={'Content-Type':type,'Accept-Ranges':'bytes','Cache-Control':'no-cache'};if(download)headers['Content-Disposition']=`attachment; filename="${download.replace(/[^a-zA-Z0-9._ -]/g,'')}"`;const match=req.headers.range?.match(/^bytes=(\d+)-(\d*)$/);if(match){const start=Number(match[1]),end=match[2]?Math.min(Number(match[2]),stat.size-1):stat.size-1;if(start> end||start>=stat.size){res.writeHead(416,{'Content-Range':`bytes */${stat.size}`});return res.end();}res.writeHead(206,{...headers,'Content-Length':end-start+1,'Content-Range':`bytes ${start}-${end}/${stat.size}`});fs.createReadStream(file,{start,end}).pipe(res);}else{res.writeHead(200,{...headers,'Content-Length':stat.size});fs.createReadStream(file).pipe(res);}}
@@ -58,7 +69,7 @@ async function inspect(file,name,id=randomUUID()){
  if(image){asset.thumbnail=path.join(data,'media',`${id}-thumb.jpg`);await encode(['-i',file,'-frames:v','1','-vf','scale=480:-2',asset.thumbnail]);}
  if(video&&!image){
   asset.proxy=path.join(data,'media',`${id}-preview.mp4`);
-  await encode(['-i',file,'-map','0:v:0','-map','0:a:0?','-vf',`scale=-2:${proxyHeight}:force_original_aspect_ratio=decrease:force_divisible_by=2`,'-c:v','libx264','-preset','ultrafast','-crf',String(proxyCrf),'-c:a','aac','-movflags','+faststart',asset.proxy]);
+  await encodeProxy(file,asset.proxy,proxyHeight);
   asset.thumbnail=path.join(data,'media',`${id}-thumb.jpg`);
   await encode(['-ss',String(Math.min(1,seconds/2)),'-i',asset.proxy,'-frames:v','1','-vf','scale=480:-2',asset.thumbnail]);
  }
