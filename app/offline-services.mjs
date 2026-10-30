@@ -42,6 +42,23 @@ export function createOfflineServices({data,nativeRoot,ffmpeg,run,getAsset,persi
    try{for await(const chunk of response.body){bytes+=chunk.length;if(bytes>spec.bytes)throw Error('Model download exceeded expected size');hash.update(chunk);await handle.write(chunk);j.downloadedBytes=bytes;j.totalBytes=spec.bytes;j.progress=Math.round(bytes/spec.bytes*85);}if(bytes!==spec.bytes||hash.digest('hex')!==spec.sha256)throw Error('Model checksum verification failed');}catch(e){await handle.close();await fsp.rm(temp,{force:true});throw e;}await handle.close();await fsp.rename(temp,file);return file;
   })();downloading.set(model,task);try{return await task;}finally{downloading.delete(model);}
  }
+ // Detect real silences from the audio itself (whisper word timestamps have almost no gaps).
+ const silenceCache=new Map();
+ async function detectSilences(assetId,{noiseDb=-30,minDuration=0.6}={}){
+  const a=getAsset(assetId);if(!a.hasAudio)throw Error('This media has no audio track');
+  const db=Math.max(-60,Math.min(-10,Number(noiseDb)||-30)),dur=Math.max(0.2,Math.min(5,Number(minDuration)||0.6));
+  const key=`${assetId}:${db}:${dur}`;if(silenceCache.has(key))return silenceCache.get(key);
+  // Decode the audio once to a light mono wav, then run silencedetect on that (fast even for 4K sources).
+  const dir=path.join(data,'jobs','silences');await fsp.mkdir(dir,{recursive:true});const wav=path.join(dir,`${assetId}.wav`);
+  if(!fs.existsSync(wav))await run(ffmpeg,['-hide_banner','-loglevel','error','-y','-i',a.file,'-vn','-ar','16000','-ac','1','-c:a','pcm_s16le',wav]);
+  const out=await run(ffmpeg,['-hide_banner','-nostats','-i',wav,'-af',`silencedetect=noise=${db}dB:d=${dur}`,'-f','null','-'],{captureStderr:true});
+  const silences=[];let start=null;
+  for(const line of out.split('\n')){
+   const s=line.match(/silence_start:\s*(-?[\d.]+)/);if(s){start=Number(s[1]);continue;}
+   const e=line.match(/silence_end:\s*([\d.]+)/);if(e&&start!==null){const end=Number(e[1]);if(end>start)silences.push({start:Math.max(0,start),end});start=null;}
+  }
+  const result={assetId,silences};silenceCache.set(key,result);return result;
+ }
  async function transcribe(assetId,model,j){
   if(!fs.existsSync(whisper))throw Error('The bundled whisper.cpp helper is missing. Reinstall TalkCut.');
   const a=getAsset(assetId);if(!a.hasAudio)throw Error('This media has no audio track');const file=await ensureModel(model||settings.model,j),dir=path.join(data,'jobs',j.id);await fsp.mkdir(dir,{recursive:true});
@@ -70,5 +87,5 @@ export function createOfflineServices({data,nativeRoot,ffmpeg,run,getAsset,persi
    await run(ffmpeg,['-hide_banner','-loglevel','error','-y',...args]);a.studioFile=output;a.studioAudio=cleaned;await persistCatalog();return {assetId,url:`/studio/${assetId}`,engine:'DeepFilterNet3 ONNX',loudness:measured};
   })();processing.set(assetId,task);try{return await task;}finally{processing.delete(assetId);}
  }
- return {status,saveSettings,ensureModel,transcribe,studioSound,cloudEnabled:()=>settings.optionalAI};
+ return {status,saveSettings,ensureModel,transcribe,studioSound,detectSilences,cloudEnabled:()=>settings.optionalAI};
 }

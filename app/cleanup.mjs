@@ -11,7 +11,25 @@ export function cleanupPlan(composition,action,options={}){
  if(action==='fillers')for(let i=0;i<live.length;i++){const w=live[i],one=normalize(w.text),two=i+1<live.length?one+' '+normalize(live[i+1].text):null;
   if(two&&FILLER_PHRASE.has(two)){removed.push({id:w.id,text:w.text,start:w.start,end:w.end},{id:live[i+1].id,text:live[i+1].text,start:live[i+1].start,end:live[i+1].end});i++;}
   else if(FILLER.test(one)||FILLER_PHRASE.has(one))removed.push({id:w.id,text:w.text,start:w.start,end:w.end});}
- if(action==='gaps')for(let i=0;i<live.length-1;i++){const a=live[i],b=live[i+1];if(a.assetId!==b.assetId)continue;const gap=b.start-a.end;if(gap>minGap&&(a.cutEnd??a.end)-(a.end)>.120001&&(b.start-(b.cutStart??b.start))>.120001){changes.push({id:a.id,cutEnd:a.end+.12},{id:b.id,cutStart:b.start-.12});removed.push({text:'Pause',start:a.end+.12,end:b.start-.12});}}
+ if(action==='gaps'){
+  // Prefer real audio-detected silences when provided (whisper word gaps are near-zero).
+  const audioSilences=Array.isArray(options.silences)?options.silences:null;
+  if(audioSilences){const pad=.1;const byId=new Map();
+   for(const sil of audioSilences){if(!(sil.end-sil.start>minGap))continue;
+    const s=sil.start+pad,e=sil.end-pad;if(e<=s)continue;
+    // Whisper words can swallow a silence inside their span. Cut the silence off the
+    // nearest boundary of whichever word overlaps it, keeping speech on both sides.
+    const host=live.find(w=>w.start<e&&w.end>s);
+    if(host){const cs=byId.get(host.id)?.cutStart??host.cutStart??host.start,ce=byId.get(host.id)?.cutEnd??host.cutEnd??host.end;
+     // trim from the side where the silence sits (closer to start -> raise cutStart, else lower cutEnd)
+     if(e-cs<ce-s){const ns=Math.min(ce,Math.max(cs,e));if(ns-cs>.05){byId.set(host.id,{id:host.id,cutStart:ns,cutEnd:ce});removed.push({text:'Silence',start:s,end:e});}}
+     else{const ne=Math.max(cs,Math.min(ce,s));if(ce-ne>.05){byId.set(host.id,{id:host.id,cutStart:cs,cutEnd:ne});removed.push({text:'Silence',start:s,end:e});}}
+    }
+   }
+   for(const c of byId.values())changes.push(c);
+  }
+  else for(let i=0;i<live.length-1;i++){const a=live[i],b=live[i+1];if(a.assetId!==b.assetId)continue;const gap=b.start-a.end;if(gap>minGap&&(a.cutEnd??a.end)-(a.end)>.120001&&(b.start-(b.cutStart??b.start))>.120001){changes.push({id:a.id,cutEnd:a.end+.12},{id:b.id,cutStart:b.start-.12});removed.push({text:'Pause',start:a.end+.12,end:b.start-.12});}}
+ }
  // Conservative adjacent repeated phrases: retain the later take, never match across sources/speakers.
  if(action==='retakes'){const cut=new Set();for(let i=0;i<live.length;i++){for(let n=Math.min(16,Math.floor((live.length-i)/2));n>=3;n--){const first=live.slice(i,i+n),second=live.slice(i+n,i+2*n);if(first.some(w=>cut.has(w.id))||first[0].assetId!==second.at(-1).assetId||first[0].speaker!==second.at(-1).speaker||second[0].start-first.at(-1).end>3||second[0].start<first.at(-1).end)continue;if(first.every((w,k)=>normalize(w.text)&&normalize(w.text)===normalize(second[k].text))){for(const w of first){cut.add(w.id);removed.push({id:w.id,text:w.text,start:w.start,end:w.end});}i+=n-1;break;}}}
   // Short stutters: a word (or 2-word unit) immediately repeated, e.g. "je je", "c'est c'est". Keep the later copy; skip emphasis words.

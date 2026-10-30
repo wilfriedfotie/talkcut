@@ -90,6 +90,7 @@ const server=http.createServer(async(req,res)=>{
  if(p==='/api/status')return json(res,200,{ready:true,transcription:true,cloudTranscription:offline.cloudEnabled()&&!!process.env.OPENAI_API_KEY,ffmpeg:fs.existsSync(ffmpeg),version:packageVersion,offline:offline.status()});
  if(p==='/api/settings'&&req.method==='POST')return json(res,200,await offline.saveSettings(await body(req)));
  if(p==='/api/models/download'&&req.method==='POST'){const input=await body(req);return json(res,202,job('model-download',async j=>{await offline.ensureModel(input.model,j);return offline.status();}));}
+ if(p==='/api/detect-silences'&&req.method==='POST'){const input=await body(req);return json(res,200,await offline.detectSilences(input.assetId,input.options||{}));}
  if(p==='/api/cleanup'&&req.method==='POST'){const input=await body(req);return json(res,200,cleanupPlan(input.composition,input.action,input.options));}
  if(p==='/api/cleanup/preview'&&req.method==='POST'){const input=await body(req);return json(res,200,cleanupPreview(input.composition,input.actions,input.options));}
  if(p==='/api/sample'&&req.method==='POST'){
