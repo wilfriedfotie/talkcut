@@ -1,0 +1,29 @@
+/* Modal restyle — Ozirus light-violet palette (scoped to .modal only). */
+.app .modal-backdrop{background:rgba(26,22,48,.28);backdrop-filter:blur(3px)}
+.app .modal{
+ --oz-primary:#7967FF;--oz-primary-dark:#6654F0;--oz-primary-light:#F0EEFF;
+ --oz-bg:#FFFFFF;--oz-bg-tint:#F4F3FF;--oz-border:#E8E6FF;--oz-border-soft:#F0EEFF;
+ --oz-text:#0A0A0F;--oz-text-2:#4B4869;--oz-text-3:#9895B0;
+ background:var(--oz-bg);
+ border:1px solid var(--oz-border);
+ border-radius:20px;
+ box-shadow:0 24px 70px rgba(48,33,72,.22),0 2px 0 var(--oz-border-soft) inset;
+}
+.app .modal .modal-heading .panel-eyebrow{color:var(--oz-primary);letter-spacing:.14em;font-weight:600}
+.app .modal h2{color:var(--oz-text)}
+.app .modal .modal-description{color:var(--oz-text-2)}
+.app .modal .field-label{color:var(--oz-text-2)}
+.app .modal :is(select,input,textarea){background:var(--oz-bg-tint);border:1px solid var(--oz-border);border-radius:12px;color:var(--oz-text)}
+.app .modal :is(select,input,textarea):focus{outline:2px solid var(--oz-primary);outline-offset:0;border-color:transparent}
+/* Preview / info surfaces take a soft violet tint */
+.app .modal :is(.export-preview,.info-box,.inline-note,.shortcut-list>div){background:var(--oz-bg-tint);border:1px solid var(--oz-border-soft);border-radius:14px}
+.app .modal .inline-note{color:var(--oz-primary-dark)}
+.app .modal kbd{background:var(--oz-primary-light);border:1px solid var(--oz-border);color:var(--oz-primary-dark);border-radius:7px}
+/* Primary action = Ozirus violet */
+.app .modal .button.primary{background:var(--oz-primary);color:#fff;border-radius:12px}
+.app .modal .button.primary:hover:not(:disabled){background:var(--oz-primary-dark)}
+.app .modal .button.secondary{background:var(--oz-bg-tint);color:var(--oz-text-2);border:1px solid var(--oz-border);border-radius:12px}
+.app .modal .button.secondary:hover:not(:disabled){background:var(--oz-primary-light)}
+/* Close icon tinted */
+.app .modal .modal-heading .icon-button{color:var(--oz-text-3)}
+.app .modal .modal-heading .icon-button:hover{color:var(--oz-primary);background:var(--oz-primary-light)}
