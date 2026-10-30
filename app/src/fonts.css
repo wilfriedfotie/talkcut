@@ -1,8 +1,11 @@
+/* Fonts from the Ozirus project: Clash Display (headings) + DM Sans (body). */
 @font-face{font-family:'Clash Display';src:url('/fonts/ClashDisplay-Regular.woff2') format('woff2');font-weight:400;font-style:normal;font-display:swap}
 @font-face{font-family:'Clash Display';src:url('/fonts/ClashDisplay-Medium.woff2') format('woff2');font-weight:500;font-style:normal;font-display:swap}
 @font-face{font-family:'Clash Display';src:url('/fonts/ClashDisplay-Semibold.woff2') format('woff2');font-weight:600;font-style:normal;font-display:swap}
 @font-face{font-family:'Clash Display';src:url('/fonts/ClashDisplay-Bold.woff2') format('woff2');font-weight:700;font-style:normal;font-display:swap}
-:root{--font-display:'Clash Display','Segoe UI',Arial,sans-serif}
-/* Clash Display (from Ozirus) used everywhere: whole app + all controls. */
-.app,.app :is(h1,h2,h3,h4,p,span,button,input,select,textarea,label,small,kbd,li,a,strong){font-family:var(--font-display)}
-.app :is(h1,h2,h3),.app .brand{letter-spacing:-.01em}
+@font-face{font-family:'DM Sans';src:url('/fonts/DMSans-Variable.woff2') format('woff2');font-weight:400 700;font-style:normal;font-display:swap}
+:root{--font-display:'Clash Display','Segoe UI',Arial,sans-serif;--font-body:'DM Sans','Segoe UI',Arial,sans-serif}
+/* Body text (DM Sans from Ozirus) across the whole app and all controls. */
+.app,.app :is(p,span,button,input,select,textarea,label,small,kbd,li,a,strong){font-family:var(--font-body)}
+/* Headings and brand keep the Clash Display display face. */
+.app :is(h1,h2,h3,h4),.app .brand{font-family:var(--font-display);letter-spacing:-.01em}
