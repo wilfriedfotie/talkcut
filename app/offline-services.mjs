@@ -7,7 +7,8 @@ import {createHash} from 'node:crypto';
 export const MODELS={
  base:{bytes:147951465,sha256:'60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe'},
  small:{bytes:487601967,sha256:'1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b'},
- medium:{bytes:1533763059,sha256:'6c14d5adee5f86394037b4e4e8b59f1673b6cee10e3cf0b11bbdbee79c156208'}
+ medium:{bytes:1533763059,sha256:'6c14d5adee5f86394037b4e4e8b59f1673b6cee10e3cf0b11bbdbee79c156208'},
+ 'large-v3-turbo':{bytes:1624555275,sha256:'1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69'}
 };
 export function whisperWords(result){
  const words=[];
@@ -25,13 +26,13 @@ export function whisperWords(result){
 }
 export function createOfflineServices({data,nativeRoot,ffmpeg,run,getAsset,persistCatalog,fetchImpl=globalThis.fetch}){
  const modelsDir=path.join(data,'models'),settingsFile=path.join(data,'settings.json');let downloading=new Map();
- let settings={model:'base',language:'auto',optionalAI:false,theme:'light',tourDismissed:false};try{settings={...settings,...JSON.parse(fs.readFileSync(settingsFile,'utf8'))};}catch{}
+ let settings={model:'large-v3-turbo',language:'auto',optionalAI:false,theme:'light',tourDismissed:false};try{settings={...settings,...JSON.parse(fs.readFileSync(settingsFile,'utf8'))};}catch{}
  const native=path.join(nativeRoot,`${process.platform}-${process.arch}`),exe=process.platform==='win32'?'.exe':'';
  const whisper=process.platform==='win32'?path.join(native,'whisper','Release','whisper-cli.exe'):path.join(native,'whisper','bin','whisper-cli');
  const deepFilter=path.join(native,'deep-filter'+exe),dfModel=path.join(native,'DeepFilterNet3_onnx.tar.gz');
  const modelFile=model=>path.join(modelsDir,`ggml-${model}.bin`);
  const status=()=>({settings:{...settings},models:Object.entries(MODELS).map(([id,m])=>({id,bytes:m.bytes,installed:fs.existsSync(modelFile(id))&&fs.statSync(modelFile(id)).size===m.bytes})),whisper:fs.existsSync(whisper),studioSound:fs.existsSync(deepFilter)&&fs.existsSync(dfModel)});
- async function saveSettings(input){if(input.model!==undefined){if(!MODELS[input.model])throw Error('Choose base, small or medium');settings.model=input.model;}if(input.language!==undefined){if(input.language!=='auto'&&!/^[a-z]{2}$/.test(input.language))throw Error('Choose auto or a 2-letter language code');settings.language=input.language;}if(input.optionalAI!==undefined)settings.optionalAI=input.optionalAI===true;if(input.theme!==undefined){if(!['light','dark'].includes(input.theme))throw Error('Choose light or dark appearance');settings.theme=input.theme;}if(input.tourDismissed!==undefined)settings.tourDismissed=input.tourDismissed===true;await fsp.writeFile(settingsFile,JSON.stringify(settings,null,2));return status();}
+ async function saveSettings(input){if(input.model!==undefined){if(!MODELS[input.model])throw Error('Choose base, small, medium or large-v3-turbo');settings.model=input.model;}if(input.language!==undefined){if(input.language!=='auto'&&!/^[a-z]{2}$/.test(input.language))throw Error('Choose auto or a 2-letter language code');settings.language=input.language;}if(input.optionalAI!==undefined)settings.optionalAI=input.optionalAI===true;if(input.theme!==undefined){if(!['light','dark'].includes(input.theme))throw Error('Choose light or dark appearance');settings.theme=input.theme;}if(input.tourDismissed!==undefined)settings.tourDismissed=input.tourDismissed===true;await fsp.writeFile(settingsFile,JSON.stringify(settings,null,2));return status();}
  async function ensureModel(model,j){
   if(!MODELS[model])throw Error('Unknown transcription model');
   const file=modelFile(model),spec=MODELS[model];if(fs.existsSync(file)&&fs.statSync(file).size===spec.bytes)return file;
