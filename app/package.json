@@ -11,6 +11,7 @@
     "start": "node server.mjs --production",
     "test:browser": "node scripts/browser-check.mjs",
     "test:layers": "node scripts/layers-browser-check.mjs",
+    "predesktop": "node scripts/dev-app-name.mjs",
     "desktop": "electron .",
     "native:setup": "node scripts/setup-native.mjs",
     "dist": "npm run build && electron-builder --config electron-builder.cjs --publish never",

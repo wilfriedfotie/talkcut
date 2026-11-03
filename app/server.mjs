@@ -11,8 +11,8 @@ import ffmpegPath from 'ffmpeg-static';
 import ffprobe from 'ffprobe-static';
 import {intervals,duration,subtitles,srt,prepareWords,emptyComposition} from './src/model.js';
 import {createProjectStore} from './project-store.mjs';
-import {renderComposition} from './render.mjs';
-import {buildFcpxml,parseRate,captionFontFaces} from './fcpxml.mjs';
+import {renderComposition,captionsAss} from './render.mjs';
+import {buildFcpxml,parseRate,sequenceSize,captionFontFaces,needsCaptionOverlay,timelineFrames} from './fcpxml.mjs';
 import {CAPTION_FACES} from './src/caption-layout.js';
 import {runAIAction} from './ai-services.mjs';
 import {runFalVideo} from './fal-video.mjs';
@@ -52,8 +52,8 @@ const encode=args=>run(ffmpeg,['-hide_banner','-loglevel','error','-y',...args])
 // (GPU<->CPU copies cost more than the encode saves at proxy resolutions), so it is OFF by default.
 const hwAccel=process.env.OZICUT_HWACCEL==='1';
 // ffmpeg with -progress on stdout: reports done/total as 0..1 and can be aborted.
-function encodeWithProgress(args,{duration,signal,onProgress}={}){
- return new Promise((resolve,reject)=>{const p=spawn(ffmpeg,['-hide_banner','-loglevel','error','-y','-nostats','-progress','pipe:1',...args],{cwd:data,windowsHide:true,signal});nativeProcesses.add(p);let err='';
+function encodeWithProgress(args,{duration,signal,onProgress,cwd=data}={}){
+ return new Promise((resolve,reject)=>{const p=spawn(ffmpeg,['-hide_banner','-loglevel','error','-y','-nostats','-progress','pipe:1',...args],{cwd,windowsHide:true,signal});nativeProcesses.add(p);let err='';
   p.stdout.on('data',b=>{const m=String(b).match(/out_time_us=(\d+)/g);if(m&&duration&&onProgress)onProgress(Math.min(.99,Number(m.at(-1).split('=')[1])/1e6/duration));});
   p.stderr.on('data',b=>{err=(err+b).slice(-2000);});p.once('error',reject);p.once('close',code=>{nativeProcesses.delete(p);code===0?resolve():reject(Error(err.trim()||`Media process exited with code ${code}`));});});
 }
@@ -106,11 +106,25 @@ async function sweepDisk({startup=false}={}){
 // Delete a project, then the media no other project uses, then any other leftovers.
 async function deleteProject(id){
  const project=await projectStore.remove(id),stillUsed=new Set((await listProjects()).flatMap(p=>[...projectAssetIds(p)]));
+ for(const c of project.compositions||[])if(validId(c.id))await removePath(path.join(data,'resolve',c.id));
  const orphans=[...projectAssetIds(project)].filter(a=>!stillUsed.has(a)&&validId(a));let freedBytes=0;
  for(const assetId of orphans){freedBytes+=await removeAssetFiles(assetId);const i=catalog.findIndex(a=>a.id===assetId);if(i>=0)catalog.splice(i,1);}
  if(orphans.length)await persistCatalog();
  freedBytes+=await sweepDisk().catch(()=>0);
  return {id,removedAssets:orphans.length,freedBytes};
+}
+// Delete one imported media from the library. Only OziCut's own files are removed (copies, proxies,
+// Studio Sound, caches under data/media): a file imported in place is never touched at its original location.
+// Refused while any saved project still uses it, so the client removes it from the project and saves first.
+async function deleteAsset(id){
+ if(!validId(id))throw Object.assign(Error('Fichier média introuvable'),{status:404});
+ if(uploading.has(id))throw Object.assign(Error('Ce média est encore en cours d’import'),{status:409});
+ if(anyJobRunning())throw Object.assign(Error('Un traitement est en cours : réessayez quand il sera terminé'),{status:409});
+ const usedBy=(await listProjects()).filter(p=>projectAssetIds(p).has(id)).map(p=>p.name||'Projet sans titre');
+ if(usedBy.length)return {id,deleted:false,usedBy};
+ const freedBytes=await removeAssetFiles(id),i=catalog.findIndex(a=>a.id===id);
+ if(i>=0){catalog.splice(i,1);await persistCatalog();}
+ return {id,deleted:true,freedBytes};
 }
 // DaVinci Resolve timeline: probe each source's frame rate, then write an FCPXML cut list.
 // Resolve only draws caption titles in fonts the system has: install ours per user on macOS (no admin rights needed).
@@ -127,7 +141,24 @@ async function exportFcpxml(comp,j,captionMetrics){
  j.stage='Lecture des cadences d’image';j.progress=20;
  for(const a of assets.filter(a=>a.type==='video')){try{const v=JSON.parse(await run(ffprobe.path,['-v','quiet','-select_streams','v:0','-show_entries','stream=r_frame_rate,avg_frame_rate','-of','json',a.file])).streams?.[0];rates[a.id]=parseRate(v?.r_frame_rate)||parseRate(v?.avg_frame_rate);}catch{/* falls back to 25 fps */}}
  j.stage='Écriture de la timeline DaVinci';j.progress=70;
- const dir=path.join(data,'jobs',j.id),output=path.join(dir,'ozicut-export.fcpxml');await fsp.mkdir(dir,{recursive:true});await fsp.writeFile(output,buildFcpxml(comp,assets,{rates,captionMetrics}));
+ const dir=path.join(data,'jobs',j.id),output=path.join(dir,'ozicut-export.fcpxml');await fsp.mkdir(dir,{recursive:true});// The caption overlay must outlive the job folder (Resolve links to it), so it lives per composition.
+ let overlay=null;
+ if(needsCaptionOverlay(comp)){
+  const segs=intervals(comp,assets),cues=subtitles(comp,segs);
+  if(cues.length){
+   j.stage='Fonds des sous-titres';const ovDir=path.join(data,'resolve',validId(comp.id)?comp.id:'export');await removePath(ovDir);await fsp.mkdir(ovDir,{recursive:true});
+   const [w,h]=sequenceSize(comp.aspect),{rate,total}=timelineFrames(comp,assets,rates),seconds=total*rate.den/rate.num;
+   // Boxes and word highlights only (layers 0 and 1): the words themselves are the editable titles.
+   await fsp.writeFile(path.join(ovDir,'boxes.ass'),captionsAss(cues,comp,w,h,captionMetrics).split('\n').filter(l=>!l.startsWith('Dialogue: 2,')).join('\n'));
+   // libass leaves alpha untouched, so the boxes are drawn on black and on white and the difference is the matte.
+   const src=c=>['-f','lavfi','-i',`color=c=${c}:s=${w}x${h}:r=${rate.num}/${rate.den}:d=${seconds}`];
+   overlay=path.join(ovDir,'ozicut-fonds-sous-titres.mov');
+   await encodeWithProgress([...src('black'),...src('white'),'-filter_complex','[0]ass=boxes.ass,format=gbrp,split[ink][inkm];[1]ass=boxes.ass,format=gbrp[paper];[paper][inkm]blend=all_mode=difference,format=gray,negate[matte];[ink][matte]alphamerge,unpremultiply=inplace=1,format=argb','-c:v','qtrle','-an',overlay],{duration:seconds,cwd:ovDir,onProgress:p=>{j.progress=30+Math.round(60*p);}});
+   await fsp.rm(path.join(ovDir,'boxes.ass'),{force:true});
+  }
+ }
+ j.stage='Écriture de la timeline DaVinci';const xml=buildFcpxml(comp,assets,{rates,captionMetrics,overlay});
+ await fsp.writeFile(output,xml);
  const newFonts=comp.captions?await installCaptionFonts(comp):[];
  return {url:`/exports/${j.id}/ozicut-export.fcpxml`,filename:'ozicut-export.fcpxml',bytes:(await fsp.stat(output)).size,newFonts};
 }
@@ -212,6 +243,8 @@ const server=http.createServer(async(req,res)=>{
  if(p==='/api/projects'&&req.method==='GET')return json(res,200,await listProjects());
  if(p==='/api/storage'&&req.method==='GET')return json(res,200,await storageUsage());
  if(p==='/api/projects'&&req.method==='POST'){const project=await body(req);const expected=req.headers['x-ozicut-revision'];const revision=expected===undefined?undefined:Number(expected);if(revision!==undefined&&(!Number.isSafeInteger(revision)||revision<0))throw Error('Révision de projet invalide');const saved=await saveProject(project,{expectedRevision:revision});realtime.projectSaved(saved,req.headers['x-ozicut-client']);return json(res,200,{saved:true,revision:saved.revision||0});}
+ const assetMatch=p.match(/^\/api\/assets\/([a-zA-Z0-9-]+)$/);
+ if(assetMatch&&req.method==='DELETE')return json(res,200,await deleteAsset(assetMatch[1]));
  const projectMatch=p.match(/^\/api\/projects\/([a-zA-Z0-9-]+)$/);
  if(projectMatch&&req.method==='DELETE')return json(res,200,await deleteProject(projectMatch[1]));
  if(projectMatch&&req.method==='GET'){const project=(await listProjects()).find(x=>x.id===projectMatch[1]);return json(res,project?200:404,project||{error:'Projet introuvable'});}

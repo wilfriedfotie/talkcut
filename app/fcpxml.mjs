@@ -1,6 +1,7 @@
+import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {intervals,subtitles} from './src/model.js';
-import {captionFaces,layoutCaption} from './src/caption-layout.js';
+import {captionFaces,captionStyle,layoutCaption} from './src/caption-layout.js';
 
 // FCPXML 1.9 timeline for DaVinci Resolve (File > Import > Timeline). Every edit OziCut made
 // (deleted words, fillers, silences, retakes, trim) becomes a real cut on the original media.
@@ -20,7 +21,7 @@ export function captionTitles(comp,cues,[w,h],metrics){
  const measure=(text,face)=>{const v=Number(metrics?.[face]?.[text]);return Number.isFinite(v)&&v>=0&&v<50?v:text===' '?.28:text.length*.56;};
  return cues.map((c,i)=>{
   const L=layoutCaption(c,comp,w,h,measure),s=L.style;if(!L.words.length)return null;
-  const look=s.bg?` backgroundColor="${rgba(s.bg,s.bgAlpha)}"`:s.outline?` strokeColor="0 0 0 1" strokeWidth="${s.outline.toFixed(1)}"`:'';
+  const look=s.outline?` strokeColor="0 0 0 1" strokeWidth="${s.outline.toFixed(1)}"`:'';
   const faces=[...new Set(L.words.map(x=>x.face))],def=f=>`<text-style-def id="c${i}${f}"><text-style font="${TITLE_FONTS[f][0]}" fontSize="${Math.round(s.fontPx)}" fontFace="${TITLE_FONTS[f][1]}" fontColor="${rgba(s.color)}"${look} alignment="center"/></text-style-def>`;
   const runs=[];L.lines.forEach((l,n)=>l.words.forEach((x,k)=>{const text=(k?' ':n?'\n':'')+x.text,prev=runs.at(-1);if(prev&&prev.face===x.face)prev.text+=text;else runs.push({face:x.face,text});}));
   const y=(.5-(L.box.y+L.box.h/2)/h)*100;
@@ -28,7 +29,17 @@ export function captionTitles(comp,cues,[w,h],metrics){
  }).filter(Boolean);
 }
 
-export function buildFcpxml(comp,assets,{rates={},maxMarkerText=80,captionMetrics}={}){
+// Resolve ignores title backgrounds in FCPXML and cannot animate the spoken word, so caption boxes and
+// word highlights are burnt by libass into one transparent video, laid under the titles in one piece per clip.
+export const needsCaptionOverlay=comp=>{const s=captionStyle(comp,1920,1080);return !!(comp.captions&&(s.bg||s.hi));};
+// Timeline rate and length in frames, exactly as buildFcpxml lays the clips out.
+export function timelineFrames(comp,assets,rates={}){
+ const segments=intervals(comp,assets),first=segments.map(s=>assets.find(a=>a.id===s.assetId)).find(a=>a?.type==='video'),rate=(first&&rates[first.id])||{num:25,den:1};
+ const frames=t=>Math.round(t*rate.num/rate.den);return {rate,total:segments.reduce((n,s)=>n+Math.max(1,frames(s.end)-frames(s.start)),0)};
+}
+
+// overlay: the caption box/highlight video (see needsCaptionOverlay), rendered at the timeline rate and size.
+export function buildFcpxml(comp,assets,{rates={},maxMarkerText=80,captionMetrics,overlay}={}){
  const segments=intervals(comp,assets);if(!segments.length)throw Error('Rien à exporter : toute la composition est coupée');
  const byId=new Map(assets.map(a=>[a.id,a]));
  const firstVideo=segments.map(s=>byId.get(s.assetId)).find(a=>a?.type==='video');
@@ -45,15 +56,18 @@ export function buildFcpxml(comp,assets,{rates={},maxMarkerText=80,captionMetric
  const zoom=Number(comp.zoom),scale=Number.isFinite(zoom)&&zoom>0&&Math.abs(zoom-1)>.001?`<adjust-transform scale="${zoom} ${zoom}"/>`:'';
  const titles=comp.captions?captionTitles(comp,subtitles(comp,segments),[w,h],captionMetrics):[];
  if(titles.length)res.push('<effect id="e0" name="Basic Title" uid=".../Titles.localized/Bumper:Opener.localized/Basic Title.localized/Basic Title.moti"/>');
+ if(overlay&&titles.length)res.push(`<format id="fo" name="OziCut ${w}x${h}" frameDuration="${time(1)}" width="${w}" height="${h}"/>`,`<asset id="ov" name="${esc(path.basename(overlay))}" start="0s" duration="${time(timelineFrames(comp,assets,rates).total)}" hasVideo="1" hasAudio="0" format="fo"><media-rep kind="original-media" src="${esc(pathToFileURL(overlay).href)}"/></asset>`);
+ const under=overlay&&titles.length;
  const deleted=(comp.words||[]).filter(w=>w.deleted);
  let offset=0;const clips=segments.map((s,i)=>{const a=byId.get(s.assetId),r=ref.get(s.assetId),start=frames(s.start),dur=Math.max(1,frames(s.end)-start);
   // Marker on the first frame of each clip that follows a cut, naming what was removed.
   const prev=segments[i-1];let marker='';
   if(prev&&prev.assetId===s.assetId&&s.start>prev.end+.01){const gone=deleted.filter(w=>w.assetId===s.assetId&&w.start>=prev.end-.01&&w.end<=s.start+.01).map(w=>w.text.trim()).filter(Boolean).join(' ');
    const label=gone?`Coupé : ${gone.length>maxMarkerText?gone.slice(0,maxMarkerText-1)+'…':gone}`:`Silence coupé · ${(s.start-prev.end).toFixed(1).replace('.',',')} s`;marker=`<marker start="${time(start)}" duration="${time(1)}" value="${esc(label)}"/>`;}
-  // Each caption hangs off the clip it starts in, so it follows that clip when the edit changes in Resolve.
-  const own=titles.filter(t=>{const f=frames(t.start);return f>=offset&&(f<offset+dur||i===segments.length-1);}).map(t=>{const f=frames(t.start);
-   return `<title ref="e0" lane="1" name="${esc(t.name.slice(0,60))}" offset="${time(start+f-offset)}" start="0s" duration="${time(Math.max(1,frames(t.end)-f))}">${t.body}</title>`;}).join('');
+  // Each caption hangs off the clip it starts in, so it follows that clip when the edit changes in Resolve;
+  // the overlay piece covering this clip sits under the titles and moves with the clip too.
+  const own=(under?`<asset-clip ref="ov" lane="1" name="Fonds des sous-titres" offset="${time(start)}" start="${time(offset)}" duration="${time(dur)}" format="fo"/>`:'')+titles.filter(t=>{const f=frames(t.start);return f>=offset&&(f<offset+dur||i===segments.length-1);}).map(t=>{const f=frames(t.start);
+   return `<title ref="e0" lane="${under?2:1}" name="${esc(t.name.slice(0,60))}" offset="${time(start+f-offset)}" start="0s" duration="${time(Math.max(1,frames(t.end)-f))}">${t.body}</title>`;}).join('');
   const clip=`<asset-clip ref="${r.aid}" name="${esc(a.name)}" offset="${time(offset)}" start="${time(start)}" duration="${time(dur)}"${a.type==='audio'?'':` format="${r.fid}"`} tcFormat="NDF">${scale}${gain}${own}${marker}</asset-clip>`;
   offset+=dur;return clip;});
  return `<?xml version="1.0" encoding="UTF-8"?>

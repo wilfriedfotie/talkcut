@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildFcpxml,parseRate} from '../fcpxml.mjs';
+import {buildFcpxml,parseRate,needsCaptionOverlay,timelineFrames} from '../fcpxml.mjs';
 
 const asset={id:'a',name:'Rush & co.mp4',file:'/tmp/rush 1.mp4',duration:10,type:'video',hasAudio:true,width:3840,height:2160};
 const words=['bonjour','euh','à','tous'].map((text,i)=>({id:String(i),assetId:'a',text,start:i*2,end:i*2+1,cutStart:i*2,cutEnd:i*2+2,deleted:text==='euh'}));
@@ -38,3 +38,12 @@ test('fcpxml turns captions into styled Resolve titles attached to their clip',(
  assert.match(xml,/start="100\/25s" duration="100\/25s" format="f1" tcFormat="NDF"><title ref="e0" lane="1" name="à tous" offset="100\/25s"/);
 });
 test('fcpxml leaves titles out when captions are off',()=>{const xml=buildFcpxml({words,assetIds:['a']},[asset],{rates:{a:{num:25,den:1}}});assert.doesNotMatch(xml,/<title |Basic Title/);});
+test('fcpxml lays one overlay piece per clip under the titles, in timeline time',()=>{
+ const comp={words,assetIds:['a'],captions:true,wordHighlight:true},rates={a:{num:25,den:1}};
+ assert.equal(needsCaptionOverlay(comp),true);assert.equal(needsCaptionOverlay({...comp,captions:false}),false);assert.equal(needsCaptionOverlay({...comp,captionBg:'',wordHighlight:false}),false);
+ assert.deepEqual(timelineFrames(comp,[asset],rates),{rate:{num:25,den:1},total:150});
+ const xml=buildFcpxml(comp,[asset],{rates,overlay:'/tmp/ov dir/fonds.mov'});
+ assert.match(xml,/<asset id="ov" name="fonds\.mov" start="0s" duration="150\/25s" hasVideo="1" hasAudio="0" format="fo"><media-rep kind="original-media" src="file:\/\/\/tmp\/ov%20dir\/fonds\.mov"\/>/);
+ assert.equal((xml.match(/<asset-clip ref="ov"/g)||[]).length,2);
+ assert.match(xml,/start="100\/25s" duration="100\/25s" format="f1" tcFormat="NDF"><asset-clip ref="ov" lane="1" name="Fonds des sous-titres" offset="100\/25s" start="50\/25s" duration="100\/25s" format="fo"\/><title ref="e0" lane="2"/);
+});

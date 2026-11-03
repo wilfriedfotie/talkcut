@@ -65,3 +65,11 @@
 .app .preview-badge.error{background:#d93a31}
 .app .preview-preparing{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;text-align:center;background:rgba(15,13,25,.78);color:#fff}
 .app .preview-preparing span{font-size:12px;opacity:.8;max-width:320px}
+
+.media-card{position:relative}
+.asset-row{position:relative;display:flex;align-items:center}
+.asset-row>.asset-item{flex:1;min-width:0}
+.asset-delete{width:26px;height:26px;flex:none;color:var(--oz-text-3,#6b6b78);opacity:0;transition:opacity .15s}
+.asset-row:hover .asset-delete,.asset-delete:focus-visible{opacity:1}
+.asset-delete:hover{color:#c0322b;background:#fdecea}
+@media (hover:none){.asset-delete{opacity:1}}
