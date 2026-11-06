@@ -4,14 +4,14 @@
 
 **Free, offline Descript alternative. Edit video by editing text, remove ums in one click, Studio Sound, 4K export, no watermark.**
 
-[![MIT license](https://img.shields.io/github/license/iamspyder/talkcut)](LICENSE)
-[![Latest release](https://img.shields.io/github/v/release/iamspyder/talkcut)](https://github.com/iamspyder/talkcut/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/iamspyder/talkcut/total)](https://github.com/iamspyder/talkcut/releases)
-[![Build](https://github.com/iamspyder/talkcut/actions/workflows/ci.yml/badge.svg)](https://github.com/iamspyder/talkcut/actions/workflows/ci.yml)
+[![MIT license](https://img.shields.io/github/license/wilfriedfotie/talkcut)](LICENSE)
+[![Latest release](https://img.shields.io/github/v/release/wilfriedfotie/talkcut)](https://github.com/wilfriedfotie/talkcut/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/wilfriedfotie/talkcut/total)](https://github.com/wilfriedfotie/talkcut/releases)
+[![Build](https://github.com/wilfriedfotie/talkcut/actions/workflows/ci.yml/badge.svg)](https://github.com/wilfriedfotie/talkcut/actions/workflows/ci.yml)
 
 [![Watch the OziCut demo](docs/demo.gif)](docs/demo.mp4)
 
-**[Watch/download the full demo — MP4, 1080p, 1:33](docs/demo.mp4)** · [Direct MP4 download](https://raw.githubusercontent.com/iamspyder/talkcut/main/docs/demo.mp4)
+**[Watch/download the full demo — MP4, 1080p, 1:33](docs/demo.mp4)** · [Direct MP4 download](https://raw.githubusercontent.com/wilfriedfotie/talkcut/main/docs/demo.mp4)
 
 Recorded from the real app using the bundled sample. Hear Studio Sound Before/After in the full video, then see dark mode, resizable panels and a completed 1080p export. The export wait is visibly labeled as accelerated. [Recording details](docs/DEMO.md).
 
@@ -19,11 +19,11 @@ Recorded from the real app using the bundled sample. Hear Studio Sound Before/Af
 
 | Platform | Latest release |
 | --- | --- |
-| Windows x64 (NSIS) | [Download .exe](https://github.com/iamspyder/talkcut/releases/latest/download/OziCut-Windows-x64.exe) |
-| macOS Intel / Apple Silicon with Rosetta | [Download .dmg](https://github.com/iamspyder/talkcut/releases/latest/download/OziCut-macOS-x64.dmg) |
-| Linux x86_64 | [Download AppImage](https://github.com/iamspyder/talkcut/releases/latest/download/OziCut-Linux-x86_64.AppImage) |
+| Windows x64 (NSIS) | [Download .exe](https://github.com/wilfriedfotie/talkcut/releases/latest/download/OziCut-Windows-x64.exe) |
+| macOS Intel / Apple Silicon with Rosetta | [Download .dmg](https://github.com/wilfriedfotie/talkcut/releases/latest/download/OziCut-macOS-x64.dmg) |
+| Linux x86_64 | [Download AppImage](https://github.com/wilfriedfotie/talkcut/releases/latest/download/OziCut-Linux-x86_64.AppImage) |
 
-[All releases, SHA-256 checksums and update metadata](https://github.com/iamspyder/talkcut/releases). Installers are unsigned; verify the SHA-256 checksums attached to each release. macOS/Linux packages must be smoke-tested on their target platforms. For AppImage, make the downloaded file executable before launching.
+[All releases, SHA-256 checksums and update metadata](https://github.com/wilfriedfotie/talkcut/releases). Installers are unsigned; verify the SHA-256 checksums attached to each release. macOS/Linux packages must be smoke-tested on their target platforms. For AppImage, make the downloaded file executable before launching.
 
 This app bundles FFmpeg/ffprobe, including GPL-enabled builds. [Third-party notices and source/build notes](THIRD_PARTY_NOTICES.md) describe their separate terms. OziCut's own code is MIT licensed.
 
@@ -74,7 +74,7 @@ Model downloads and manual update checks contact their download services. Explic
 Use Node.js 24, npm and Git. macOS/Linux native builds need CMake, a C++ toolchain and platform SDKs. Windows uses prebuilt x64 helpers. Build on the target OS.
 
 ```sh
-git clone https://github.com/iamspyder/talkcut.git
+git clone https://github.com/wilfriedfotie/talkcut.git
 cd talkcut/app
 npm ci
 npm run native:setup

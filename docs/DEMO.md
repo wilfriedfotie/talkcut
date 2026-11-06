@@ -1,6 +1,6 @@
 # OziCut demo
 
-[Watch/download the full 1080p MP4](demo.mp4) · [Direct download](https://raw.githubusercontent.com/iamspyder/talkcut/main/docs/demo.mp4)
+[Watch/download the full 1080p MP4](demo.mp4) · [Direct download](https://raw.githubusercontent.com/wilfriedfotie/talkcut/main/docs/demo.mp4)
 
 [![OziCut workflow preview](demo.gif)](demo.mp4)
 

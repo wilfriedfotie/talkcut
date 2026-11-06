@@ -1,6 +1,6 @@
 {
   "name": "ozicut",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "type": "module",
   "scripts": {
@@ -48,11 +48,11 @@
   "main": "desktop/main.cjs",
   "repository": {
     "type": "git",
-    "url": "https://github.com/iamspyder/talkcut.git"
+    "url": "https://github.com/wilfriedfotie/talkcut.git"
   },
-  "homepage": "https://github.com/iamspyder/talkcut#readme",
+  "homepage": "https://github.com/wilfriedfotie/talkcut#readme",
   "bugs": {
-    "url": "https://github.com/iamspyder/talkcut/issues"
+    "url": "https://github.com/wilfriedfotie/talkcut/issues"
   },
   "keywords": [
     "descript-alternative",

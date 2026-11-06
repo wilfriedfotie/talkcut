@@ -29,7 +29,7 @@ The Windows launcher uses an available packaged build before falling back to the
 
 ## Release configuration
 
-The target is GitHub Releases at iamspyder/talkcut. The repository must exist and published releases must include installer/update metadata. Configure signing secrets before public release; macOS updating requires signed builds. CI creates drafts for version tags and never embeds GitHub credentials in the application.
+The target is GitHub Releases at wilfriedfotie/talkcut. The repository must exist and published releases must include installer/update metadata. Configure signing secrets before public release; macOS updating requires signed builds. CI creates drafts for version tags and never embeds GitHub credentials in the application.
 
 ## Verification artifacts
 

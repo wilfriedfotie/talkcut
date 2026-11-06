@@ -4,7 +4,7 @@ Rajan Gupta maintains OziCut. The latest public 1.x release receives security fi
 
 ## Report a vulnerability privately
 
-Use [GitHub private vulnerability reporting](https://github.com/iamspyder/talkcut/security/advisories/new). The maintainer must enable this repository feature before the public launch. If the private form is unavailable, open an issue requesting a private reporting channel **without exploit details, recordings, keys or other sensitive data**. Do not publish a vulnerability until coordinated disclosure is agreed.
+Use [GitHub private vulnerability reporting](https://github.com/wilfriedfotie/talkcut/security/advisories/new). The maintainer must enable this repository feature before the public launch. If the private form is unavailable, open an issue requesting a private reporting channel **without exploit details, recordings, keys or other sensitive data**. Do not publish a vulnerability until coordinated disclosure is agreed.
 
 Include the affected version/OS, impact, minimal reproduction with synthetic files, and suggested mitigation. Expect an initial response within seven days where possible; this is a maintenance target, not a service guarantee.
 

@@ -1,6 +1,6 @@
 # Releasing OziCut
 
-Owner and release maintainer: **Rajan Gupta**. Repository: `iamspyder/talkcut`.
+Owner and release maintainer: **Rajan Gupta**. Repository: `wilfriedfotie/talkcut`.
 
 ## First public launch
 
@@ -11,7 +11,7 @@ gh repo create talkcut --public --source=. --push
 git push origin v1.0.0
 ```
 
-The authenticated GitHub CLI account must be `iamspyder`. Creating/pushing triggers CI; pushing the version tag triggers release builds. Version in `app/package.json`, lockfile and tag must match.
+The authenticated GitHub CLI account must be `wilfriedfotie`. Creating/pushing triggers CI; pushing the version tag triggers release builds. Version in `app/package.json`, lockfile and tag must match.
 
 Before announcing: review the recorded demo (docs/DEMO.md); enable private vulnerability reporting, GitHub secret scanning/push protection and branch protection; verify every installer and its checksums on its target OS. Review Corresponding Source and bundled sample voice rights in `THIRD_PARTY_NOTICES.md` before redistributing installers. The release workflow deliberately opens a **draft** release so this final review occurs before public distribution. Publish the draft only after completing these checks.
 
@@ -25,7 +25,7 @@ The macOS job runs Node/Electron x64 (Rosetta on Apple Silicon hosts), because t
 
 ## Signing and updates
 
-Updates point to `iamspyder/talkcut` through `app/release-config.json`. Settings provides explicit check/download/install actions; editing stays offline. Only published releases are offered; drafts are not updates.
+Updates point to `wilfriedfotie/talkcut` through `app/release-config.json`. Settings provides explicit check/download/install actions; editing stays offline. Only published releases are offered; drafts are not updates.
 
 Optional Actions secrets:
 
