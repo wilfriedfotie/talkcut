@@ -35,6 +35,7 @@
     "ws": "^8.22.0"
   },
   "devDependencies": {
+    "@electron/windows-sign": "^1.2.2",
     "electron": "^44.9.0",
     "electron-builder": "^26.15.3",
     "eslint": "^10.13.0",
