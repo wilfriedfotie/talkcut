@@ -70,6 +70,8 @@ jobs:
             app/release/*-SHA256SUMS.txt
   release:
     needs: build
+    # Publish whatever platforms built successfully instead of none.
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
